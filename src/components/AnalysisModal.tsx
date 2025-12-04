@@ -9,7 +9,7 @@ interface AnalysisResult {
   strengths?: string[];
   weaknesses?: string[];
   improvements?: string[];
-  keywords?: string[];
+  missingKeywords?: string[];
 }
 
 interface AnalysisModalProps {
@@ -108,11 +108,11 @@ export function AnalysisModal({ isOpen, onClose, result, onUpgrade, isPremium }:
               )}
 
               {/* Keywords */}
-              {result.keywords && result.keywords.length > 0 && (
+              {result.missingKeywords && result.missingKeywords.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="font-semibold text-foreground">Palavras-chave Faltantes</h4>
                   <div className="flex flex-wrap gap-2">
-                    {result.keywords.map((keyword, i) => (
+                    {result.missingKeywords.map((keyword, i) => (
                       <span
                         key={i}
                         className="px-3 py-1 text-xs rounded-full bg-primary/10 text-primary font-medium"

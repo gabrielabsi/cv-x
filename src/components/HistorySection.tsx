@@ -1,59 +1,53 @@
 import { useState, useEffect } from "react";
-import { History, Trash2, ExternalLink } from "lucide-react";
+import { History, Trash2, ExternalLink, Cloud, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FitThermometer } from "./FitThermometer";
-
-export interface HistoryItem {
-  id: string;
-  date: string;
-  score: number;
-  jobTitle: string;
-  summary: string;
-  isPremium: boolean;
-}
+import { useAuth } from "@/hooks/useAuth";
+import {
+  HistoryItem,
+  getLocalHistory,
+  clearLocalHistory,
+  getCloudHistory,
+  clearCloudHistory,
+} from "@/lib/history";
 
 interface HistorySectionProps {
   onViewResult: (item: HistoryItem) => void;
+  refreshTrigger?: number;
 }
 
-const STORAGE_KEY = "resume-analysis-history";
-
-export function getHistory(): HistoryItem[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveToHistory(item: Omit<HistoryItem, "id" | "date">): HistoryItem {
-  const history = getHistory();
-  const newItem: HistoryItem = {
-    ...item,
-    id: crypto.randomUUID(),
-    date: new Date().toISOString(),
-  };
-  const updated = [newItem, ...history].slice(0, 10); // Keep last 10
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  return newItem;
-}
-
-export function clearHistory() {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
-export function HistorySection({ onViewResult }: HistorySectionProps) {
+export function HistorySection({ onViewResult, refreshTrigger }: HistorySectionProps) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
-    setHistory(getHistory());
-  }, []);
+    loadHistory();
+  }, [user, refreshTrigger]);
 
-  const handleClear = () => {
-    clearHistory();
+  const loadHistory = async () => {
+    setIsLoading(true);
+    if (user) {
+      const cloudHistory = await getCloudHistory(user.id);
+      setHistory(cloudHistory);
+    } else {
+      setHistory(getLocalHistory());
+    }
+    setIsLoading(false);
+  };
+
+  const handleClear = async () => {
+    if (user) {
+      await clearCloudHistory(user.id);
+    } else {
+      clearLocalHistory();
+    }
     setHistory([]);
   };
+
+  if (isLoading) {
+    return null;
+  }
 
   if (history.length === 0) {
     return null;
@@ -73,6 +67,15 @@ export function HistorySection({ onViewResult }: HistorySectionProps) {
         <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <History className="w-5 h-5 text-primary" />
           Análises Recentes
+          {user ? (
+            <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+              <Cloud className="w-3 h-3" /> Sincronizado
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+              <HardDrive className="w-3 h-3" /> Local
+            </span>
+          )}
         </h3>
         <Button variant="ghost" size="sm" onClick={handleClear}>
           <Trash2 className="w-4 h-4 mr-2" />
@@ -108,3 +111,5 @@ export function HistorySection({ onViewResult }: HistorySectionProps) {
     </div>
   );
 }
+
+export type { HistoryItem };
