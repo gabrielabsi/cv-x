@@ -26,7 +26,7 @@ Currículo: ${resumeText ? resumeText.slice(0, 2000) : `LinkedIn: ${linkedInUrl}
 Vaga URL: ${jobUrl}`;
 
     const promptPremium = `Analise currículo vs vaga detalhadamente. Retorne JSON:
-{"score":0-100,"summary":"2 frases","strengths":["3 itens"],"weaknesses":["3 itens"],"improvements":["3 sugestões"],"keywords":["5 palavras-chave faltantes"]}
+{"score":0-100,"summary":"2 frases","strengths":["3 itens"],"weaknesses":["3 itens"],"improvements":["3 sugestões"],"missingKeywords":["5 palavras-chave faltantes"]}
 
 Currículo: ${resumeText ? resumeText.slice(0, 3000) : `LinkedIn: ${linkedInUrl}`}
 Vaga URL: ${jobUrl}`;

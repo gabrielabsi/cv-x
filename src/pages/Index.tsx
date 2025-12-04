@@ -5,9 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResumeInput } from "@/components/ResumeInput";
 import { AnalysisModal } from "@/components/AnalysisModal";
-import { HistorySection, HistoryItem, saveToHistory } from "@/components/HistorySection";
+import { HistorySection, HistoryItem } from "@/components/HistorySection";
+import { UserMenu } from "@/components/UserMenu";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { analyzeFree, analyzePremium, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
+import { saveToLocalHistory, saveToCloudHistory } from "@/lib/history";
 
 const Index = () => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
@@ -17,7 +20,18 @@ const Index = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPremiumResult, setIsPremiumResult] = useState(false);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const saveHistory = async (item: Omit<HistoryItem, "id" | "date">) => {
+    if (user) {
+      await saveToCloudHistory(user.id, item);
+    } else {
+      saveToLocalHistory(item);
+    }
+    setHistoryRefresh((prev) => prev + 1);
+  };
 
   const handleAnalyze = async () => {
     if (!jobUrl.trim()) {
@@ -57,9 +71,8 @@ const Index = () => {
       setIsPremiumResult(false);
       setIsModalOpen(true);
 
-      // Save to history
       const jobTitle = extractJobTitle(jobUrl);
-      saveToHistory({
+      await saveHistory({
         score: result.score,
         jobTitle,
         summary: result.summary,
@@ -77,8 +90,6 @@ const Index = () => {
   };
 
   const handleUpgrade = async () => {
-    // For now, simulate premium result
-    // In production, this would trigger Stripe payment
     setIsLoading(true);
     
     try {
@@ -97,12 +108,15 @@ const Index = () => {
       setAnalysisResult(result);
       setIsPremiumResult(true);
 
-      // Update history
       const jobTitle = extractJobTitle(jobUrl);
-      saveToHistory({
+      await saveHistory({
         score: result.score,
         jobTitle,
         summary: result.summary,
+        strengths: result.strengths,
+        weaknesses: result.weaknesses,
+        improvements: result.improvements,
+        missingKeywords: result.missingKeywords,
         isPremium: true,
       });
 
@@ -125,13 +139,16 @@ const Index = () => {
     setAnalysisResult({
       score: item.score,
       summary: item.summary,
+      strengths: item.strengths,
+      weaknesses: item.weaknesses,
+      improvements: item.improvements,
+      missingKeywords: item.missingKeywords,
     });
     setIsPremiumResult(item.isPremium);
     setIsModalOpen(true);
   };
 
   const extractJobTitle = (url: string): string => {
-    // Simple extraction from LinkedIn job URL
     try {
       const parts = url.split("/");
       const jobIndex = parts.indexOf("jobs");
@@ -164,9 +181,12 @@ const Index = () => {
     <div className="min-h-screen gradient-hero">
       {/* Header */}
       <header className="container py-6">
-        <div className="flex items-center gap-2">
-          <FileSearch className="w-8 h-8 text-primary" />
-          <span className="text-xl font-bold text-foreground">ResumeMatch</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileSearch className="w-8 h-8 text-primary" />
+            <span className="text-xl font-bold text-foreground">ResumeMatch</span>
+          </div>
+          <UserMenu />
         </div>
       </header>
 
@@ -265,7 +285,7 @@ const Index = () => {
         </div>
 
         {/* History */}
-        <HistorySection onViewResult={handleViewHistory} />
+        <HistorySection onViewResult={handleViewHistory} refreshTrigger={historyRefresh} />
       </main>
 
       {/* Modal */}
