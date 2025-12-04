@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface AnalysisInput {
   resumeText?: string;
   linkedInUrl?: string;
-  jobUrl: string;
+  jobDescription: string;
 }
 
 export interface AnalysisResult {
