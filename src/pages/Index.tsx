@@ -20,7 +20,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { analyzeFree, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
 import { supabase } from "@/integrations/supabase/client";
 import cvxLogo from "@/assets/cvx-logo.png";
-import heroBackground from "@/assets/hero-background.png";
 const Index = () => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -139,16 +138,15 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen relative">
-      {/* Hero Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${heroBackground})` }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background" />
+    <div className="min-h-screen gradient-hero neural-pattern">
+      {/* Ambient glow effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[150px] animate-glow-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/6 rounded-full blur-[120px] animate-glow-pulse delay-300" />
+      </div>
 
       {/* Header */}
-      <header className="relative z-10 container py-5">
+      <header className="relative container py-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img 
@@ -162,7 +160,7 @@ const Index = () => {
       </header>
 
       {/* Hero */}
-      <main className="relative z-10 container pb-20">
+      <main className="relative container pb-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center pt-8 pb-16">
           {/* Left: Text Content */}
           <div className="text-left">
