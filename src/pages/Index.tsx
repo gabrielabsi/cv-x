@@ -17,9 +17,9 @@ import { AnalysisModal } from "@/components/AnalysisModal";
 import { UserMenu } from "@/components/UserMenu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { analyzeFree, analyzePremium, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
+import { analyzeFree, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
+import { supabase } from "@/integrations/supabase/client";
 import cvxLogo from "@/assets/cvx-logo.png";
-
 const Index = () => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -83,32 +83,32 @@ const Index = () => {
     setIsLoading(true);
     
     try {
+      // Store analysis data for after payment
       let resumeText = "";
-      
       if (selectedFile) {
         resumeText = await extractTextFromFile(selectedFile);
       }
 
-      const result = await analyzePremium({
+      sessionStorage.setItem("cvx_pending_analysis", JSON.stringify({
         resumeText: resumeText || undefined,
         linkedInUrl: linkedInUrl.trim() || undefined,
         jobDescription: jobDescription.trim(),
-      });
+      }));
 
-      setAnalysisResult(result);
-      setIsPremiumResult(true);
+      // Create checkout session
+      const { data, error } = await supabase.functions.invoke("create-checkout");
 
-      toast({
-        title: "Relatório gerado!",
-        description: "Seu relatório completo está pronto.",
-      });
+      if (error) throw error;
+      if (!data?.url) throw new Error("Falha ao criar sessão de pagamento");
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
     } catch (error) {
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };

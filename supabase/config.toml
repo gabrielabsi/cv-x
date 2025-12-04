@@ -25,3 +25,6 @@ verify_jwt = true
 
 [functions.extract-text]
 verify_jwt = true
+
+[functions.create-checkout]
+verify_jwt = false
