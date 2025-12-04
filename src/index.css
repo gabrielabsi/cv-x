@@ -2,46 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
-
+    /* Tech Premium Light (kept for compatibility) */
+    --background: 220 15% 96%;
+    --foreground: 220 20% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
+    --card-foreground: 220 20% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
+    --popover-foreground: 220 20% 10%;
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-
-    --accent: 160 84% 39%;
-    --accent-foreground: 0 0% 100%;
-
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 20% 10%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 187 92% 50%;
+    --accent-foreground: 220 20% 10%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
     --ring: 217 91% 60%;
-
-    --radius: 0.75rem;
-
-    /* Custom tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(200, 100%, 50%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(160, 84%, 39%) 0%, hsl(170, 80%, 45%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(210, 20%, 98%) 0%, hsl(210, 30%, 95%) 100%);
-    --shadow-card: 0 4px 20px -4px hsl(217 91% 60% / 0.15);
-    --shadow-hover: 0 8px 30px -4px hsl(217 91% 60% / 0.25);
+    --radius: 0.625rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -54,42 +37,48 @@
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
-
+    /* Tech Premium Dark - #0A0D12 base */
+    --background: 220 25% 5%;
+    --foreground: 210 20% 98%;
+    
+    /* Card: #11151C */
+    --card: 220 22% 9%;
+    --card-foreground: 210 20% 98%;
+    
+    --popover: 220 22% 9%;
+    --popover-foreground: 210 20% 98%;
+    
+    /* Primary: #3B82F6 */
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 160 84% 39%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    
+    /* Secondary: slightly lighter dark */
+    --secondary: 220 20% 14%;
+    --secondary-foreground: 210 20% 98%;
+    
+    --muted: 220 20% 14%;
+    --muted-foreground: 220 15% 60%;
+    
+    /* Accent: #22D3EE (cyan) */
+    --accent: 187 92% 53%;
+    --accent-foreground: 220 25% 5%;
+    
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Border: #1F2937 */
+    --border: 220 18% 16%;
+    --input: 220 18% 16%;
     --ring: 217 91% 60%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 220 25% 5%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 220 20% 14%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 220 18% 16%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -99,39 +88,115 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    @apply bg-background text-foreground antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 @layer utilities {
+  /* Gradients */
   .gradient-primary {
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(187, 92%, 53%) 100%);
   }
   
-  .gradient-accent {
-    background: var(--gradient-accent);
+  .gradient-primary-subtle {
+    background: linear-gradient(135deg, hsl(217, 91%, 60%, 0.15) 0%, hsl(187, 92%, 53%, 0.15) 100%);
   }
 
   .gradient-hero {
-    background: var(--gradient-hero);
+    background: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(217, 91%, 60%, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 80% 0%, hsl(187, 92%, 53%, 0.1) 0%, transparent 50%),
+      hsl(var(--background));
   }
 
-  .shadow-card {
-    box-shadow: var(--shadow-card);
+  .gradient-glow {
+    background: radial-gradient(ellipse at center, hsl(217, 91%, 60%, 0.2) 0%, transparent 70%);
   }
 
-  .shadow-hover {
-    box-shadow: var(--shadow-hover);
-  }
-
+  /* Text gradient */
   .text-gradient {
     @apply bg-clip-text text-transparent;
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(187, 92%, 53%) 100%);
+  }
+
+  /* Shadows */
+  .shadow-glow {
+    box-shadow: 0 0 40px -10px hsl(217, 91%, 60%, 0.4);
+  }
+
+  .shadow-glow-sm {
+    box-shadow: 0 0 20px -5px hsl(217, 91%, 60%, 0.3);
+  }
+
+  .shadow-card-premium {
+    box-shadow: 
+      0 4px 20px -4px hsl(0, 0%, 0%, 0.4),
+      0 0 0 1px hsl(var(--border));
+  }
+
+  .shadow-elevation {
+    box-shadow: 
+      0 1px 2px hsl(0, 0%, 0%, 0.1),
+      0 4px 8px hsl(0, 0%, 0%, 0.1),
+      0 8px 16px hsl(0, 0%, 0%, 0.1);
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply backdrop-blur-md;
+    background: hsl(var(--card) / 0.8);
+  }
+
+  .glass-border {
+    border: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  /* Hover effects */
+  .hover-lift {
+    @apply transition-all duration-300;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200;
+  }
+
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+
+  /* AI scan line effect */
+  .scan-line {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scan-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, hsl(187, 92%, 53%), transparent);
+    animation: scan 3s ease-in-out infinite;
+  }
+
+  @keyframes scan {
+    0% { left: -100%; }
+    50% { left: 100%; }
+    100% { left: 100%; }
   }
 }
 
-/* Thermometer animation */
+/* Animations */
 @keyframes fill-thermometer {
   from {
     stroke-dashoffset: 283;
@@ -140,10 +205,10 @@
 
 @keyframes pulse-glow {
   0%, 100% {
-    filter: drop-shadow(0 0 8px hsl(160, 84%, 39%, 0.4));
+    filter: drop-shadow(0 0 8px hsl(187, 92%, 53%, 0.4));
   }
   50% {
-    filter: drop-shadow(0 0 20px hsl(160, 84%, 39%, 0.7));
+    filter: drop-shadow(0 0 24px hsl(187, 92%, 53%, 0.7));
   }
 }
 
@@ -159,11 +224,29 @@
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
 
@@ -180,7 +263,22 @@
 }
 
 .animate-fade-up {
-  animation: fade-up 0.6s ease-out forwards;
+  animation: fade-up 0.7s ease-out forwards;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--border)) 0%,
+    hsl(var(--muted)) 50%,
+    hsl(var(--border)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
 }
 
 /* Staggered animation delays */
@@ -188,3 +286,29 @@
 .delay-200 { animation-delay: 200ms; }
 .delay-300 { animation-delay: 300ms; }
 .delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Selection */
+::selection {
+  background: hsl(217, 91%, 60%, 0.3);
+  color: hsl(var(--foreground));
+}

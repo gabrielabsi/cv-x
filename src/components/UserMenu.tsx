@@ -1,4 +1,4 @@
-import { LogOut, User, Cloud } from "lucide-react";
+import { LogOut, Cloud, LogIn, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,10 +18,12 @@ export function UserMenu() {
   if (!user) {
     return (
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+        <Button variant="ghost" size="sm" onClick={() => navigate("/auth")} className="gap-2">
+          <LogIn className="w-4 h-4" />
           Entrar
         </Button>
-        <Button variant="accent" size="sm" onClick={() => navigate("/auth")}>
+        <Button variant="default" size="sm" onClick={() => navigate("/auth")} className="gap-2">
+          <UserPlus className="w-4 h-4" />
           Criar conta
         </Button>
       </div>
@@ -38,25 +40,25 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary font-medium">
+        <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0 hover:bg-secondary">
+          <Avatar className="h-10 w-10 rounded-xl">
+            <AvatarImage src={profile?.avatar_url || undefined} className="rounded-xl" />
+            <AvatarFallback className="rounded-xl bg-primary/20 text-primary font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <div className="flex items-center gap-3 p-2">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary font-medium">
+      <DropdownMenuContent align="end" className="w-60 bg-card border-border">
+        <div className="flex items-center gap-3 p-3">
+          <Avatar className="h-11 w-11 rounded-xl">
+            <AvatarImage src={profile?.avatar_url || undefined} className="rounded-xl" />
+            <AvatarFallback className="rounded-xl bg-primary/20 text-primary font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col space-y-0.5">
-            <p className="text-sm font-medium leading-none">
+          <div className="flex flex-col space-y-0.5 min-w-0">
+            <p className="text-sm font-semibold leading-none text-foreground truncate">
               {profile?.display_name || "Usuário"}
             </p>
             <p className="text-xs leading-none text-muted-foreground truncate">
@@ -64,18 +66,22 @@ export function UserMenu() {
             </p>
           </div>
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="gap-2 text-muted-foreground">
-          <Cloud className="w-4 h-4" />
+        <DropdownMenuSeparator className="bg-border" />
+        <DropdownMenuItem className="gap-2.5 text-muted-foreground py-2.5 cursor-default">
+          <div className="w-5 h-5 rounded bg-accent/20 flex items-center justify-center">
+            <Cloud className="w-3 h-3 text-accent" />
+          </div>
           Histórico sincronizado
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-border" />
         <DropdownMenuItem
-          className="gap-2 text-destructive focus:text-destructive"
+          className="gap-2.5 text-destructive focus:text-destructive py-2.5 cursor-pointer"
           onClick={() => signOut()}
         >
-          <LogOut className="w-4 h-4" />
-          Sair
+          <div className="w-5 h-5 rounded bg-destructive/20 flex items-center justify-center">
+            <LogOut className="w-3 h-3" />
+          </div>
+          Sair da conta
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

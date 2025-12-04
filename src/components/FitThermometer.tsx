@@ -33,9 +33,9 @@ export function FitThermometer({ score, animate = true }: FitThermometerProps) {
   }, [score, animate]);
 
   const getColor = (value: number) => {
-    if (value >= 75) return "hsl(160, 84%, 39%)"; // accent green
-    if (value >= 50) return "hsl(45, 93%, 47%)"; // yellow
-    if (value >= 25) return "hsl(25, 95%, 53%)"; // orange
+    if (value >= 75) return "hsl(187, 92%, 53%)"; // accent cyan
+    if (value >= 50) return "hsl(217, 91%, 60%)"; // primary blue
+    if (value >= 25) return "hsl(38, 92%, 50%)"; // amber
     return "hsl(0, 84%, 60%)"; // red
   };
 
@@ -54,7 +54,13 @@ export function FitThermometer({ score, animate = true }: FitThermometerProps) {
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative w-40 h-40">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        {/* Glow effect */}
+        <div 
+          className="absolute inset-0 rounded-full blur-xl opacity-30"
+          style={{ backgroundColor: color }}
+        />
+        
+        <svg className="relative w-full h-full -rotate-90" viewBox="0 0 100 100">
           {/* Background circle */}
           <circle
             cx="50"
@@ -62,7 +68,7 @@ export function FitThermometer({ score, animate = true }: FitThermometerProps) {
             r="45"
             fill="none"
             stroke="currentColor"
-            strokeWidth="8"
+            strokeWidth="6"
             className="text-secondary"
           />
           {/* Progress circle */}
@@ -72,21 +78,21 @@ export function FitThermometer({ score, animate = true }: FitThermometerProps) {
             r="45"
             fill="none"
             stroke={color}
-            strokeWidth="8"
+            strokeWidth="6"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             className={animate ? "animate-fill-thermometer" : ""}
             style={{
               transition: animate ? "none" : "stroke-dashoffset 0.3s ease-out",
-              filter: `drop-shadow(0 0 8px ${color}40)`,
+              filter: `drop-shadow(0 0 12px ${color})`,
             }}
           />
         </svg>
         {/* Score display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span 
-            className="text-4xl font-bold"
+            className="text-4xl font-bold font-display"
             style={{ color }}
           >
             {displayScore}
@@ -96,10 +102,11 @@ export function FitThermometer({ score, animate = true }: FitThermometerProps) {
       </div>
       {/* Label */}
       <div 
-        className="px-4 py-2 rounded-full text-sm font-semibold"
+        className="px-4 py-2 rounded-full text-sm font-semibold border"
         style={{ 
-          backgroundColor: `${color}20`,
-          color: color 
+          backgroundColor: `${color}15`,
+          color: color,
+          borderColor: `${color}30`
         }}
       >
         {label} Match
