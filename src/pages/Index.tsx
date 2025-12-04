@@ -1,53 +1,41 @@
 import { useState } from "react";
 import { 
-  Link, 
   Loader2, 
   Sparkles, 
   Zap, 
   Shield, 
   Cpu,
   TrendingUp,
-  ChevronRight
+  ChevronRight,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ResumeInput } from "@/components/ResumeInput";
 import { AnalysisModal } from "@/components/AnalysisModal";
-import { HistorySection, HistoryItem } from "@/components/HistorySection";
 import { UserMenu } from "@/components/UserMenu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { analyzeFree, analyzePremium, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
-import { saveToLocalHistory, saveToCloudHistory } from "@/lib/history";
 import cvxLogo from "@/assets/cvx-logo.png";
 
 const Index = () => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [jobUrl, setJobUrl] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPremiumResult, setIsPremiumResult] = useState(false);
-  const [historyRefresh, setHistoryRefresh] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const saveHistory = async (item: Omit<HistoryItem, "id" | "date">) => {
-    if (user) {
-      await saveToCloudHistory(user.id, item);
-    } else {
-      saveToLocalHistory(item);
-    }
-    setHistoryRefresh((prev) => prev + 1);
-  };
-
   const handleAnalyze = async () => {
-    if (!jobUrl.trim()) {
+    if (!jobDescription.trim() || jobDescription.trim().length < 50) {
       toast({
-        title: "URL da vaga obrigatória",
-        description: "Por favor, insira a URL da vaga para análise.",
+        title: "Descrição da vaga obrigatória",
+        description: "Cole a descrição completa da vaga (mínimo 50 caracteres).",
         variant: "destructive",
       });
       return;
@@ -74,20 +62,12 @@ const Index = () => {
       const result = await analyzeFree({
         resumeText: resumeText || undefined,
         linkedInUrl: linkedInUrl.trim() || undefined,
-        jobUrl: jobUrl.trim(),
+        jobDescription: jobDescription.trim(),
       });
 
       setAnalysisResult(result);
       setIsPremiumResult(false);
       setIsModalOpen(true);
-
-      const jobTitle = extractJobTitle(jobUrl);
-      await saveHistory({
-        score: result.score,
-        jobTitle,
-        summary: result.summary,
-        isPremium: false,
-      });
     } catch (error) {
       toast({
         title: "Erro na análise",
@@ -112,23 +92,11 @@ const Index = () => {
       const result = await analyzePremium({
         resumeText: resumeText || undefined,
         linkedInUrl: linkedInUrl.trim() || undefined,
-        jobUrl: jobUrl.trim(),
+        jobDescription: jobDescription.trim(),
       });
 
       setAnalysisResult(result);
       setIsPremiumResult(true);
-
-      const jobTitle = extractJobTitle(jobUrl);
-      await saveHistory({
-        score: result.score,
-        jobTitle,
-        summary: result.summary,
-        strengths: result.strengths,
-        weaknesses: result.weaknesses,
-        improvements: result.improvements,
-        missingKeywords: result.missingKeywords,
-        isPremium: true,
-      });
 
       toast({
         title: "Relatório gerado!",
@@ -143,30 +111,6 @@ const Index = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleViewHistory = (item: HistoryItem) => {
-    setAnalysisResult({
-      score: item.score,
-      summary: item.summary,
-      strengths: item.strengths,
-      weaknesses: item.weaknesses,
-      improvements: item.improvements,
-      missingKeywords: item.missingKeywords,
-    });
-    setIsPremiumResult(item.isPremium);
-    setIsModalOpen(true);
-  };
-
-  const extractJobTitle = (url: string): string => {
-    try {
-      const parts = url.split("/");
-      const jobIndex = parts.indexOf("jobs");
-      if (jobIndex !== -1 && parts[jobIndex + 1]) {
-        return decodeURIComponent(parts[jobIndex + 1]).replace(/-/g, " ");
-      }
-    } catch {}
-    return "Vaga analisada";
   };
 
   const features = [
@@ -326,28 +270,27 @@ const Index = () => {
               {/* Divider */}
               <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-              {/* Job URL */}
+              {/* Job Description */}
               <div className="space-y-3">
-                <Label htmlFor="jobUrl" className="text-base font-semibold text-foreground flex items-center gap-2">
+                <Label htmlFor="jobDescription" className="text-base font-semibold text-foreground flex items-center gap-2">
                   <span className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">2</span>
-                  URL da Vaga
+                  Descrição da Vaga
                 </Label>
                 <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded bg-accent/20 flex items-center justify-center">
-                    <Link className="w-3 h-3 text-accent" />
+                  <div className="absolute left-4 top-4 w-5 h-5 rounded bg-accent/20 flex items-center justify-center">
+                    <FileText className="w-3 h-3 text-accent" />
                   </div>
-                  <Input
-                    id="jobUrl"
-                    type="url"
-                    placeholder="https://linkedin.com/jobs/view/..."
-                    value={jobUrl}
-                    onChange={(e) => setJobUrl(e.target.value)}
-                    className="pl-12 h-12 bg-secondary/50 border-border focus:border-primary focus:ring-primary/20 transition-all"
+                  <Textarea
+                    id="jobDescription"
+                    placeholder="Cole aqui a descrição completa da vaga (requisitos, responsabilidades, qualificações...)"
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    className="pl-12 min-h-[120px] bg-secondary/50 border-border focus:border-primary focus:ring-primary/20 transition-all resize-none"
                     disabled={isLoading}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Cole a URL da vaga do LinkedIn ou outro site de empregos
+                  Copie e cole a descrição completa da vaga para uma análise mais precisa
                 </p>
               </div>
 
@@ -379,8 +322,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* History */}
-        <HistorySection onViewResult={handleViewHistory} refreshTrigger={historyRefresh} />
       </main>
 
       {/* Modal */}
