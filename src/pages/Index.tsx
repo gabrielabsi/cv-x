@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { 
-  FileSearch, 
   Link, 
   Loader2, 
   Sparkles, 
   Zap, 
   Shield, 
-  Target,
   Cpu,
   TrendingUp,
   ChevronRight
@@ -22,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { analyzeFree, analyzePremium, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
 import { saveToLocalHistory, saveToCloudHistory } from "@/lib/history";
+import cvxLogo from "@/assets/cvx-logo.png";
 
 const Index = () => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
@@ -174,7 +173,7 @@ const Index = () => {
     {
       icon: Cpu,
       title: "IA Avançada",
-      description: "GPT-4.1 para análise precisa",
+      description: "Tecnologia de ponta",
     },
     {
       icon: Zap,
@@ -195,23 +194,22 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen gradient-hero">
+    <div className="min-h-screen gradient-hero neural-pattern">
       {/* Ambient glow effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[128px] animate-glow-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-accent/10 rounded-full blur-[100px] animate-glow-pulse delay-300" />
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[150px] animate-glow-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/6 rounded-full blur-[120px] animate-glow-pulse delay-300" />
       </div>
 
       {/* Header */}
       <header className="relative container py-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-glow-sm">
-              <FileSearch className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold font-display text-foreground">
-              Resume<span className="text-primary">Match</span>
-            </span>
+            <img 
+              src={cvxLogo} 
+              alt="CVX" 
+              className="h-10 w-auto"
+            />
           </div>
           <UserMenu />
         </div>
@@ -219,36 +217,69 @@ const Index = () => {
 
       {/* Hero */}
       <main className="relative container pb-20">
-        <div className="max-w-4xl mx-auto text-center pt-12 pb-16">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 animate-fade-up">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Powered by GPT-4.1</span>
+        <div className="grid lg:grid-cols-2 gap-12 items-center pt-8 pb-16">
+          {/* Left: Text Content */}
+          <div className="text-left">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 animate-fade-up">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Powered by AI</span>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-display text-foreground mb-6 leading-[1.1] animate-fade-up delay-100">
+              Análise Inteligente de{" "}
+              <span className="text-gradient">Currículo com IA</span>
+            </h1>
+            
+            {/* Subtitle */}
+            <p className="text-lg md:text-xl text-muted-foreground max-w-xl mb-10 animate-fade-up delay-200">
+              Avalie seu currículo com tecnologia usada por recrutadores de alto nível.
+              Obtenha insights precisos e melhore suas chances de contratação.
+            </p>
+
+            {/* Stats */}
+            <div className="flex items-center gap-8 md:gap-12 animate-fade-up delay-300">
+              {stats.map((stat, i) => (
+                <div key={i} className="text-left">
+                  <div className="text-2xl md:text-3xl font-bold font-display text-foreground">
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-muted-foreground">{stat.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Title */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-display text-foreground mb-6 leading-[1.1] animate-fade-up delay-100">
-            Análise Inteligente de{" "}
-            <br className="hidden md:block" />
-            <span className="text-gradient">Currículo com IA</span>
-          </h1>
-          
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-up delay-200">
-            Avalie seu currículo com tecnologia usada por recrutadores de alto nível.
-            Obtenha insights precisos e melhore suas chances de contratação.
-          </p>
-
-          {/* Stats */}
-          <div className="flex items-center justify-center gap-8 md:gap-12 mb-12 animate-fade-up delay-300">
-            {stats.map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-2xl md:text-3xl font-bold font-display text-foreground">
-                  {stat.value}
-                </div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+          {/* Right: AI Visual Element */}
+          <div className="relative flex items-center justify-center animate-fade-up delay-300">
+            <div className="relative w-72 h-72 md:w-80 md:h-80">
+              {/* Outer ring */}
+              <div className="absolute inset-0 rounded-full border border-primary/20 animate-orbit" style={{ animationDuration: '25s' }}>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary shadow-glow-sm" />
               </div>
-            ))}
+              
+              {/* Middle ring */}
+              <div className="absolute inset-6 rounded-full border border-accent/20 animate-orbit" style={{ animationDuration: '18s', animationDirection: 'reverse' }}>
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full bg-accent shadow-glow-cyan" />
+              </div>
+              
+              {/* Inner ring */}
+              <div className="absolute inset-12 rounded-full border border-primary/30 animate-orbit" style={{ animationDuration: '12s' }}>
+                <div className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary/80" />
+              </div>
+              
+              {/* Center glow */}
+              <div className="absolute inset-16 rounded-full gradient-primary opacity-20 animate-pulse-ring" />
+              
+              {/* Center core */}
+              <div className="absolute inset-20 rounded-full bg-card border border-border flex items-center justify-center shadow-card-premium">
+                <div className="text-center">
+                  <div className="text-4xl font-bold font-display text-gradient">AI</div>
+                  <div className="text-xs text-muted-foreground mt-1">Scanning</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
