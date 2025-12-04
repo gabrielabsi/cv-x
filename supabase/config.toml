@@ -21,7 +21,7 @@ enabled = true
 site_url = "http://localhost:3000"
 
 [functions.analyze-resume]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-text]
-verify_jwt = false
+verify_jwt = true
