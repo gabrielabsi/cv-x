@@ -229,7 +229,7 @@ const Index = () => {
             {/* Title */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-display text-foreground mb-6 leading-[1.1] animate-fade-up delay-100">
               Análise Inteligente de{" "}
-              <span className="text-gradient">Currículo com IA</span>
+              <span className="text-foreground">Currículo com IA</span>
             </h1>
             
             {/* Subtitle */}
