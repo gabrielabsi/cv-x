@@ -1,9 +1,153 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const OPENAI_API_KEY = Deno.env.get("Open_AI");
+
+async function callOpenAI(systemPrompt: string, userPrompt: string, jsonMode = true) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4.1",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      ...(jsonMode && { response_format: { type: "json_object" } }),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("OpenAI API error:", response.status, errorText);
+    throw new Error(`OpenAI API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("Resposta vazia do modelo");
+  }
+
+  return JSON.parse(content);
+}
+
+async function summarizeResume(resumeText: string) {
+  const systemPrompt = `Você é um especialista em análise de currículos. Extraia as informações principais do currículo e retorne em JSON estruturado.`;
+  
+  const userPrompt = `Analise o currículo abaixo e extraia em JSON:
+{
+  "cargo_atual": "",
+  "anos_experiencia": 0,
+  "habilidades_tecnicas": [],
+  "habilidades_comportamentais": [],
+  "formacao": [],
+  "certificacoes": [],
+  "idiomas": [],
+  "experiencias_relevantes": []
+}
+
+Currículo:
+${resumeText.slice(0, 4000)}`;
+
+  return await callOpenAI(systemPrompt, userPrompt);
+}
+
+async function summarizeJob(jobText: string) {
+  const systemPrompt = `Você é um especialista em análise de vagas. Extraia os requisitos principais da vaga e retorne em JSON estruturado.`;
+  
+  const userPrompt = `Analise a descrição da vaga abaixo e extraia em JSON:
+{
+  "titulo": "",
+  "empresa": "",
+  "nivel_senioridade": "",
+  "requisitos_obrigatorios": [],
+  "requisitos_desejaveis": [],
+  "habilidades_tecnicas": [],
+  "habilidades_comportamentais": [],
+  "beneficios": [],
+  "modelo_trabalho": ""
+}
+
+Vaga:
+${jobText.slice(0, 4000)}`;
+
+  return await callOpenAI(systemPrompt, userPrompt);
+}
+
+async function analyzeFit(
+  resumeSummaryJson: any,
+  jobSummaryJson: any,
+  mode: "free" | "premium" = "free"
+) {
+  const systemPrompt = `
+Você é um avaliador profissional de currículos e recrutador especializado em análise baseada em requisitos de vaga.
+
+REGRAS:
+- Baseie tudo APENAS nos JSONs resumidos do currículo e da vaga.
+- Não invente dados.
+- Seja direto e conciso.
+- Se solicitado apenas o termômetro, não gere análise completa.
+
+FORMATO DE RESPOSTA:
+
+Para versão gratuita:
+
+{
+  "termometro_fit": 0,
+  "justificativa_resumida": ""
+}
+
+Para versão premium:
+
+{
+  "termometro_fit": 0,
+  "justificativa_resumida": "",
+  "forcas": [],
+  "fraquezas": [],
+  "palavras_chave_faltantes": [],
+  "riscos": [],
+  "oportunidades_melhoria_curriculo": [],
+  "explicacao_detalhada": ""
+}
+`;
+
+  const userPrompt =
+    mode === "free"
+      ? `
+Aqui estão os resumos em JSON.
+
+Resumo do currículo:
+${JSON.stringify(resumeSummaryJson)}
+
+Resumo da vaga:
+${JSON.stringify(jobSummaryJson)}
+
+Gere apenas o JSON da versão gratuita (termometro_fit e justificativa_resumida).
+`
+      : `
+Aqui estão os resumos em JSON.
+
+Resumo do currículo:
+${JSON.stringify(resumeSummaryJson)}
+
+Resumo da vaga:
+${JSON.stringify(jobSummaryJson)}
+
+Gere o JSON completo da versão premium, seguindo exatamente o formato especificado no system prompt.
+`;
+
+  return await callOpenAI(systemPrompt, userPrompt);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,89 +156,41 @@ serve(async (req) => {
 
   try {
     const { resumeText, linkedInUrl, jobUrl, type } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error("API key not configured");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OpenAI API key not configured");
     }
 
-    // Build concise prompt to minimize tokens
-    const promptFree = `Analise currículo vs vaga. Retorne JSON:
-{"score":0-100,"summary":"2 frases max"}
+    // Get job description from URL or use provided text
+    const jobText = jobUrl || "";
+    const resumeContent = resumeText || `LinkedIn Profile: ${linkedInUrl}`;
 
-Currículo: ${resumeText ? resumeText.slice(0, 2000) : `LinkedIn: ${linkedInUrl}`}
-Vaga URL: ${jobUrl}`;
+    console.log("Starting analysis...", { type, hasResume: !!resumeText, hasLinkedIn: !!linkedInUrl });
 
-    const promptPremium = `Analise currículo vs vaga detalhadamente. Retorne JSON:
-{"score":0-100,"summary":"2 frases","strengths":["3 itens"],"weaknesses":["3 itens"],"improvements":["3 sugestões"],"missingKeywords":["5 palavras-chave faltantes"]}
+    // 1) Summarize resume
+    const resumeSummary = await summarizeResume(resumeContent);
+    console.log("Resume summarized");
 
-Currículo: ${resumeText ? resumeText.slice(0, 3000) : `LinkedIn: ${linkedInUrl}`}
-Vaga URL: ${jobUrl}`;
+    // 2) Summarize job
+    const jobSummary = await summarizeJob(jobText);
+    console.log("Job summarized");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: "Você é um especialista em RH e análise de currículos. Responda APENAS em JSON válido, sem markdown.",
-          },
-          {
-            role: "user",
-            content: type === "premium" ? promptPremium : promptFree,
-          },
-        ],
-        temperature: 0.3,
-        max_tokens: type === "premium" ? 800 : 300,
+    // 3) Analyze fit
+    const mode = type === "premium" ? "premium" : "free";
+    const analysis = await analyzeFit(resumeSummary, jobSummary, mode);
+    console.log("Analysis complete");
+
+    // Map response to expected format
+    const result = {
+      score: analysis.termometro_fit,
+      summary: analysis.justificativa_resumida,
+      ...(mode === "premium" && {
+        strengths: analysis.forcas,
+        weaknesses: analysis.fraquezas,
+        improvements: analysis.oportunidades_melhoria_curriculo,
+        missingKeywords: analysis.palavras_chave_faltantes,
       }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI API error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Muitas requisições. Aguarde um momento." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos esgotados. Entre em contato." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      throw new Error("AI service error");
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("No response from AI");
-    }
-
-    // Parse JSON from response
-    let result;
-    try {
-      // Remove potential markdown code blocks
-      const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
-      result = JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error("Parse error:", parseError, "Content:", content);
-      // Fallback response
-      result = {
-        score: 50,
-        summary: "Não foi possível analisar completamente. Tente novamente.",
-      };
-    }
+    };
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
