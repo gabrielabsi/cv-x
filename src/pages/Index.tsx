@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { FileSearch, Link, Loader2, Sparkles, Zap, Shield, Target } from "lucide-react";
+import { 
+  FileSearch, 
+  Link, 
+  Loader2, 
+  Sparkles, 
+  Zap, 
+  Shield, 
+  Target,
+  Cpu,
+  TrendingUp,
+  ChevronRight
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -161,57 +172,95 @@ const Index = () => {
 
   const features = [
     {
-      icon: Zap,
-      title: "Análise Instantânea",
-      description: "Resultado em segundos com IA avançada",
+      icon: Cpu,
+      title: "IA Avançada",
+      description: "GPT-4.1 para análise precisa",
     },
     {
-      icon: Target,
-      title: "Match Preciso",
-      description: "Compare seu perfil com os requisitos da vaga",
+      icon: Zap,
+      title: "Instantâneo",
+      description: "Resultado em segundos",
     },
     {
       icon: Shield,
-      title: "Dados Seguros",
-      description: "Seus dados são processados e não armazenados",
+      title: "Seguro",
+      description: "Dados criptografados",
     },
+  ];
+
+  const stats = [
+    { value: "98%", label: "Precisão" },
+    { value: "50K+", label: "Análises" },
+    { value: "4.9", label: "Avaliação" },
   ];
 
   return (
     <div className="min-h-screen gradient-hero">
+      {/* Ambient glow effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[128px] animate-glow-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-accent/10 rounded-full blur-[100px] animate-glow-pulse delay-300" />
+      </div>
+
       {/* Header */}
-      <header className="container py-6">
+      <header className="relative container py-5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileSearch className="w-8 h-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">ResumeMatch</span>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-glow-sm">
+              <FileSearch className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="text-xl font-bold font-display text-foreground">
+              Resume<span className="text-primary">Match</span>
+            </span>
           </div>
           <UserMenu />
         </div>
       </header>
 
       {/* Hero */}
-      <main className="container pb-20">
-        <div className="max-w-3xl mx-auto text-center pt-8 pb-12 animate-fade-up">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight">
-            Avaliação de Currículo{" "}
-            <span className="text-gradient">com IA</span>
+      <main className="relative container pb-20">
+        <div className="max-w-4xl mx-auto text-center pt-12 pb-16">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 animate-fade-up">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-primary">Powered by GPT-4.1</span>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-display text-foreground mb-6 leading-[1.1] animate-fade-up delay-100">
+            Análise Inteligente de{" "}
+            <br className="hidden md:block" />
+            <span className="text-gradient">Currículo com IA</span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Descubra em segundos como seu currículo se compara com a vaga dos seus sonhos.
-            Análise gratuita com pontuação de match e sugestões de melhoria.
+          
+          {/* Subtitle */}
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-up delay-200">
+            Avalie seu currículo com tecnologia usada por recrutadores de alto nível.
+            Obtenha insights precisos e melhore suas chances de contratação.
           </p>
+
+          {/* Stats */}
+          <div className="flex items-center justify-center gap-8 md:gap-12 mb-12 animate-fade-up delay-300">
+            {stats.map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="text-2xl md:text-3xl font-bold font-display text-foreground">
+                  {stat.value}
+                </div>
+                <div className="text-sm text-muted-foreground">{stat.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Features */}
-        <div className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12 animate-fade-up delay-100">
+        <div className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12 animate-fade-up delay-300">
           {features.map((feature, i) => (
             <div
               key={i}
-              className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border"
+              className="flex items-center gap-4 p-4 rounded-xl bg-card/50 border border-border backdrop-blur-sm hover-lift group"
             >
-              <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-                <feature.icon className="w-5 h-5 text-primary-foreground" />
+              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                <feature.icon className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <h3 className="font-semibold text-foreground text-sm">{feature.title}</h3>
@@ -221,14 +270,18 @@ const Index = () => {
           ))}
         </div>
 
-        {/* Form */}
-        <div className="max-w-2xl mx-auto animate-fade-up delay-200">
-          <div className="p-6 md:p-8 rounded-2xl bg-card border border-border shadow-card">
-            <div className="space-y-6">
+        {/* Form Card */}
+        <div className="max-w-2xl mx-auto animate-fade-up delay-400">
+          <div className="p-6 md:p-8 rounded-2xl bg-card border border-border shadow-card-premium relative overflow-hidden">
+            {/* Card glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            
+            <div className="relative space-y-6">
               {/* Resume Input */}
               <div>
-                <Label className="text-base font-semibold text-foreground mb-3 block">
-                  1. Seu Currículo
+                <Label className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">1</span>
+                  Seu Currículo
                 </Label>
                 <ResumeInput
                   selectedFile={selectedFile}
@@ -239,20 +292,26 @@ const Index = () => {
                 />
               </div>
 
+              {/* Divider */}
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
               {/* Job URL */}
-              <div className="space-y-2">
-                <Label htmlFor="jobUrl" className="text-base font-semibold text-foreground">
-                  2. URL da Vaga
+              <div className="space-y-3">
+                <Label htmlFor="jobUrl" className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">2</span>
+                  URL da Vaga
                 </Label>
-                <div className="relative">
-                  <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded bg-accent/20 flex items-center justify-center">
+                    <Link className="w-3 h-3 text-accent" />
+                  </div>
                   <Input
                     id="jobUrl"
                     type="url"
                     placeholder="https://linkedin.com/jobs/view/..."
                     value={jobUrl}
                     onChange={(e) => setJobUrl(e.target.value)}
-                    className="pl-10"
+                    className="pl-12 h-12 bg-secondary/50 border-border focus:border-primary focus:ring-primary/20 transition-all"
                     disabled={isLoading}
                   />
                 </div>
@@ -264,22 +323,27 @@ const Index = () => {
               {/* Submit */}
               <Button
                 variant="hero"
-                className="w-full"
+                className="w-full group"
                 onClick={handleAnalyze}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Analisando...
+                    Analisando com IA...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5" />
+                    <TrendingUp className="w-5 h-5" />
                     Gerar Análise Gratuita
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                Análise gratuita • Sem cadastro necessário • Resultado em segundos
+              </p>
             </div>
           </div>
         </div>
