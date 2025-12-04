@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,6 +8,14 @@ const corsHeaders = {
 };
 
 const OPENAI_API_KEY = Deno.env.get("Open_AI");
+
+// Input validation schema
+const inputSchema = z.object({
+  resumeText: z.string().max(100000, "Resume text too long").optional(),
+  linkedInUrl: z.string().url("Invalid LinkedIn URL").max(500).optional(),
+  jobUrl: z.string().max(50000, "Job description too long").optional(),
+  type: z.enum(["free", "premium"]).default("free"),
+});
 
 async function callOpenAI(systemPrompt: string, userPrompt: string, jsonMode = true) {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -155,10 +164,30 @@ serve(async (req) => {
   }
 
   try {
-    const { resumeText, linkedInUrl, jobUrl, type } = await req.json();
+    // Validate input
+    const rawInput = await req.json();
+    const validationResult = inputSchema.safeParse(rawInput);
+    
+    if (!validationResult.success) {
+      console.error("Validation error:", validationResult.error.errors);
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: validationResult.error.errors.map(e => e.message) }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    const { resumeText, linkedInUrl, jobUrl, type } = validationResult.data;
 
     if (!OPENAI_API_KEY) {
       throw new Error("OpenAI API key not configured");
+    }
+
+    // Ensure at least one resume input is provided
+    if (!resumeText && !linkedInUrl) {
+      return new Response(
+        JSON.stringify({ error: "Either resumeText or linkedInUrl is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Get job description from URL or use provided text

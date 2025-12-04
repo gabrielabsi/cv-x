@@ -1,9 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Validation schema for JSON input
+const jsonInputSchema = z.object({
+  text: z.string().max(100000, "Text too long").optional().default(""),
+});
+
+// Constants for file validation
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_EXTENSIONS = [".pdf", ".docx"];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -20,10 +30,30 @@ serve(async (req) => {
       const file = formData.get("file") as File;
       
       if (!file) {
-        throw new Error("No file provided");
+        return new Response(
+          JSON.stringify({ error: "No file provided" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        return new Response(
+          JSON.stringify({ error: "File too large. Maximum size is 10MB" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       const fileName = file.name.toLowerCase();
+      
+      // Validate file extension
+      if (!ALLOWED_EXTENSIONS.some(ext => fileName.endsWith(ext))) {
+        return new Response(
+          JSON.stringify({ error: "Invalid file type. Only PDF and DOCX files are allowed" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const arrayBuffer = await file.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
       
@@ -83,8 +113,18 @@ serve(async (req) => {
         text = "Arquivo processado. Conteúdo extraído parcialmente. Para melhores resultados, cole o texto do currículo diretamente ou use LinkedIn.";
       }
     } else {
-      const body = await req.json();
-      text = body.text || "";
+      // Validate JSON input
+      const rawBody = await req.json();
+      const validationResult = jsonInputSchema.safeParse(rawBody);
+      
+      if (!validationResult.success) {
+        return new Response(
+          JSON.stringify({ error: "Invalid input", details: validationResult.error.errors.map(e => e.message) }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      text = validationResult.data.text;
     }
 
     return new Response(JSON.stringify({ text }), {
