@@ -9,12 +9,11 @@ const corsHeaders = {
 
 const OPENAI_API_KEY = Deno.env.get("Open_AI");
 
-// Input validation schema
+// Input validation schema - free analysis only (premium handled by verify-payment)
 const inputSchema = z.object({
   resumeText: z.string().max(100000, "Resume text too long").optional(),
   linkedInUrl: z.string().url("Invalid LinkedIn URL").max(500).optional(),
   jobDescription: z.string().min(50, "Job description too short").max(50000, "Job description too long"),
-  type: z.enum(["free", "premium"]).default("free"),
 });
 
 async function callOpenAI(systemPrompt: string, userPrompt: string, jsonMode = true) {
@@ -168,7 +167,7 @@ serve(async (req) => {
       );
     }
     
-    const { resumeText, linkedInUrl, jobDescription, type } = validationResult.data;
+    const { resumeText, linkedInUrl, jobDescription } = validationResult.data;
 
     if (!OPENAI_API_KEY) {
       throw new Error("OpenAI API key not configured");
@@ -186,7 +185,7 @@ serve(async (req) => {
     const jobText = jobDescription;
     const resumeContent = resumeText || `LinkedIn Profile URL: ${linkedInUrl}\n\nNOTA: Analise com base no perfil típico de um profissional com este LinkedIn. Se não conseguir acessar, forneça uma análise genérica baseada no cargo mencionado na vaga.`;
 
-    console.log("Starting analysis...", { type, hasResume: !!resumeText, hasLinkedIn: !!linkedInUrl });
+    console.log("Starting free analysis...", { hasResume: !!resumeText, hasLinkedIn: !!linkedInUrl });
 
     // 1) Summarize resume
     const resumeSummary = await summarizeResume(resumeContent);
@@ -196,21 +195,14 @@ serve(async (req) => {
     const jobSummary = await summarizeJob(jobText);
     console.log("Job summarized");
 
-    // 3) Analyze fit
-    const mode = type === "premium" ? "premium" : "free";
-    const analysis = await analyzeFit(resumeSummary, jobSummary, mode);
+    // 3) Analyze fit - always free mode (premium handled by verify-payment endpoint)
+    const analysis = await analyzeFit(resumeSummary, jobSummary, "free");
     console.log("Analysis complete");
 
-    // Map response to expected format
+    // Map response to expected format (free tier only)
     const result = {
       score: analysis.termometro_fit,
       summary: analysis.justificativa_resumida,
-      ...(mode === "premium" && {
-        strengths: analysis.forcas,
-        weaknesses: analysis.fraquezas,
-        improvements: analysis.oportunidades_melhoria_curriculo,
-        missingKeywords: analysis.palavras_chave_faltantes,
-      }),
     };
 
     return new Response(JSON.stringify(result), {

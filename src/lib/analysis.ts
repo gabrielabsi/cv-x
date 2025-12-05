@@ -17,7 +17,7 @@ export interface AnalysisResult {
 
 export async function analyzeFree(input: AnalysisInput): Promise<AnalysisResult> {
   const { data, error } = await supabase.functions.invoke("analyze-resume", {
-    body: { ...input, type: "free" },
+    body: input,
   });
 
   if (error) {
