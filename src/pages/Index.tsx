@@ -79,7 +79,7 @@ const Index = () => {
     }
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (couponCode?: string) => {
     setIsLoading(true);
     
     try {
@@ -95,8 +95,13 @@ const Index = () => {
         jobDescription: jobDescription.trim(),
       }));
 
-      // Create checkout session
-      const { data, error } = await supabase.functions.invoke("create-checkout");
+      // Create checkout session with optional coupon
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { 
+          productType: "premium_single",
+          couponCode 
+        }
+      });
 
       if (error) throw error;
       if (!data?.url) throw new Error("Falha ao criar sessão de pagamento");

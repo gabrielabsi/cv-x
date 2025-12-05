@@ -12,6 +12,20 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
+// Price IDs for different products
+const PRICE_IDS = {
+  premium_single: "price_1SadsnJmb1TyvE3zq8Mslx2G",
+  basico: "price_1SazNiJmb1TyvE3zbLklgJmP",
+  intermediario: "price_1SazNxJmb1TyvE3z9L6ywLLz",
+  avancado: "price_1SazOBJmb1TyvE3zJUHhdhIQ",
+};
+
+// Coupon IDs
+const COUPON_IDS: Record<string, string> = {
+  "PrimeiroCVX": "lTRTOJmX",
+  "NovaVersão": "YOciUg9Z",
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -27,6 +41,11 @@ serve(async (req) => {
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+
+    const body = await req.json().catch(() => ({}));
+    const { productType = "premium_single", couponCode } = body;
+    
+    logStep("Request body", { productType, couponCode });
 
     // Check if user is authenticated (optional for this flow)
     let userEmail: string | undefined;
@@ -54,21 +73,41 @@ serve(async (req) => {
     }
 
     const origin = req.headers.get("origin") || "https://cvx.lovable.app";
+    
+    // Determine the price ID and mode
+    const priceId = PRICE_IDS[productType as keyof typeof PRICE_IDS] || PRICE_IDS.premium_single;
+    const isSubscription = ["basico", "intermediario", "avancado"].includes(productType);
+    
+    logStep("Checkout config", { priceId, isSubscription, productType });
 
-    // Create checkout session for one-time payment
-    const session = await stripe.checkout.sessions.create({
+    // Build checkout session config
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       customer_email: customerId ? undefined : userEmail,
       line_items: [
         {
-          price: "price_1SadsnJmb1TyvE3zq8Mslx2G",
+          price: priceId,
           quantity: 1,
         },
       ],
-      mode: "payment",
-      success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      mode: isSubscription ? "subscription" : "payment",
+      success_url: isSubscription 
+        ? `${origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`
+        : `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?canceled=true`,
-    });
+      allow_promotion_codes: true,
+    };
+
+    // Apply coupon if provided and valid
+    if (couponCode && COUPON_IDS[couponCode]) {
+      sessionConfig.discounts = [{ coupon: COUPON_IDS[couponCode] }];
+      // Remove allow_promotion_codes when using discounts
+      delete sessionConfig.allow_promotion_codes;
+      logStep("Applied coupon", { couponCode, couponId: COUPON_IDS[couponCode] });
+    }
+
+    // Create checkout session
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     logStep("Checkout session created", { sessionId: session.id });
 
