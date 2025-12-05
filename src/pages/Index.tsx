@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { 
-  Loader2, 
   Sparkles, 
   Zap, 
   Shield, 
@@ -9,6 +8,7 @@ import {
   ChevronRight,
   FileText
 } from "lucide-react";
+import { AnalysisLoading } from "@/components/AnalysisLoading";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -152,7 +152,7 @@ const Index = () => {
             <img 
               src={cvxLogo} 
               alt="CVX" 
-              className="h-10 w-auto"
+              className="h-14 w-auto"
             />
           </div>
           <UserMenu />
@@ -301,18 +301,9 @@ const Index = () => {
                 onClick={handleAnalyze}
                 disabled={isLoading}
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Analisando com IA...
-                  </>
-                ) : (
-                  <>
-                    <TrendingUp className="w-5 h-5" />
-                    Gerar Análise Gratuita
-                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
+                <TrendingUp className="w-5 h-5" />
+                Gerar Análise Gratuita
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
 
               <p className="text-xs text-center text-muted-foreground">
@@ -323,6 +314,9 @@ const Index = () => {
         </div>
 
       </main>
+
+      {/* Loading Overlay */}
+      {isLoading && <AnalysisLoading />}
 
       {/* Modal */}
       <AnalysisModal
