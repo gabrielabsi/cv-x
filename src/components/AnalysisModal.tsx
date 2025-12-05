@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { FitThermometer } from "./FitThermometer";
-import { Sparkles, Download, ArrowRight, CheckCircle2, AlertCircle, Lightbulb, Tag, Crown } from "lucide-react";
+import { Sparkles, Download, ArrowRight, CheckCircle2, AlertCircle, Lightbulb, Tag, Crown, Ticket } from "lucide-react";
 
 interface AnalysisResult {
   score: number;
@@ -16,11 +18,14 @@ interface AnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
   result: AnalysisResult | null;
-  onUpgrade: () => void;
+  onUpgrade: (couponCode?: string) => void;
   isPremium?: boolean;
 }
 
 export function AnalysisModal({ isOpen, onClose, result, onUpgrade, isPremium }: AnalysisModalProps) {
+  const [couponCode, setCouponCode] = useState("");
+  const [showCouponInput, setShowCouponInput] = useState(false);
+  
   if (!result) return null;
 
   const premiumFeatures = [
@@ -184,11 +189,41 @@ export function AnalysisModal({ isOpen, onClose, result, onUpgrade, isPremium }:
                       </li>
                     ))}
                   </ul>
-                  <Button variant="premium" className="w-full h-12" onClick={onUpgrade}>
+                  <Button variant="premium" className="w-full h-12" onClick={() => onUpgrade(couponCode || undefined)}>
                     <Crown className="w-4 h-4" />
                     Obter Relatório por R$ 4,99
                     <ArrowRight className="w-4 h-4" />
                   </Button>
+                  
+                  {/* Coupon Input */}
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    {showCouponInput ? (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Digite o cupom"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          className="flex-1 bg-secondary/50 border-border text-sm"
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setShowCouponInput(false)}
+                          className="text-muted-foreground"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowCouponInput(true)}
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
+                      >
+                        <Ticket className="w-4 h-4" />
+                        Tenho um cupom de desconto
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </>
