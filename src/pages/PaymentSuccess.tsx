@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, Loader2, FileText, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { analyzePremium, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
+import { analyzeVerifiedPremium, AnalysisResult } from "@/lib/analysis";
 import cvxLogo from "@/assets/cvx-logo.png";
 
 const PaymentSuccess = () => {
@@ -39,7 +39,9 @@ const PaymentSuccess = () => {
       try {
         const { resumeText, linkedInUrl, jobDescription } = JSON.parse(storedData);
 
-        const premiumResult = await analyzePremium({
+        // Server-side payment verification before generating premium report
+        const premiumResult = await analyzeVerifiedPremium({
+          sessionId,
           resumeText,
           linkedInUrl,
           jobDescription,
@@ -60,7 +62,7 @@ const PaymentSuccess = () => {
         setStatus("error");
         toast({
           title: "Erro ao gerar relatório",
-          description: "Entre em contato com o suporte.",
+          description: "Pagamento não verificado ou erro ao gerar relatório.",
           variant: "destructive",
         });
       }
