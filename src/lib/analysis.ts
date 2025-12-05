@@ -41,6 +41,28 @@ export async function analyzePremium(input: AnalysisInput): Promise<AnalysisResu
   return data;
 }
 
+export interface VerifiedPremiumInput extends AnalysisInput {
+  sessionId: string;
+}
+
+export async function analyzeVerifiedPremium(input: VerifiedPremiumInput): Promise<AnalysisResult> {
+  const { data, error } = await supabase.functions.invoke("verify-payment", {
+    body: {
+      sessionId: input.sessionId,
+      resumeText: input.resumeText,
+      linkedInUrl: input.linkedInUrl,
+      jobDescription: input.jobDescription,
+    },
+  });
+
+  if (error) {
+    console.error("Verified analysis error:", error);
+    throw new Error("Erro ao verificar pagamento ou gerar relatório.");
+  }
+
+  return data;
+}
+
 export async function extractTextFromFile(file: File): Promise<string> {
   // For PDF files, we'll send them to the edge function for extraction
   const formData = new FormData();
