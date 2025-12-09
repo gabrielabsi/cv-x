@@ -20,10 +20,11 @@ const PRICE_IDS = {
   avancado: "price_1SazOBJmb1TyvE3zJUHhdhIQ",
 };
 
-// Coupon IDs
+// Coupon IDs - normalized to uppercase for case-insensitive matching
 const COUPON_IDS: Record<string, string> = {
-  "PrimeiroCVX": "lTRTOJmX",
-  "NovaVersão": "YOciUg9Z",
+  "PRIMEIROCVX": "lTRTOJmX",
+  "NOVAVERSAO": "YOciUg9Z",
+  "NOVAVERSAO10": "9bPMdAJA",
 };
 
 serve(async (req) => {
@@ -98,12 +99,13 @@ serve(async (req) => {
       allow_promotion_codes: true,
     };
 
-    // Apply coupon if provided and valid
-    if (couponCode && COUPON_IDS[couponCode]) {
-      sessionConfig.discounts = [{ coupon: COUPON_IDS[couponCode] }];
+    // Apply coupon if provided and valid (case-insensitive)
+    const normalizedCouponCode = couponCode?.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (normalizedCouponCode && COUPON_IDS[normalizedCouponCode]) {
+      sessionConfig.discounts = [{ coupon: COUPON_IDS[normalizedCouponCode] }];
       // Remove allow_promotion_codes when using discounts
       delete sessionConfig.allow_promotion_codes;
-      logStep("Applied coupon", { couponCode, couponId: COUPON_IDS[couponCode] });
+      logStep("Applied coupon", { couponCode, normalizedCouponCode, couponId: COUPON_IDS[normalizedCouponCode] });
     }
 
     // Create checkout session

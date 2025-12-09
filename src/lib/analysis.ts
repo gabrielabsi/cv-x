@@ -13,6 +13,7 @@ export interface AnalysisResult {
   weaknesses?: string[];
   improvements?: string[];
   missingKeywords?: string[];
+  suggestedJobTitles?: string[];
 }
 
 export async function analyzeFree(input: AnalysisInput): Promise<AnalysisResult> {

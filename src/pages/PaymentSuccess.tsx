@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle, Loader2, FileText, ArrowRight } from "lucide-react";
+import { CheckCircle, Loader2, FileText, ArrowRight, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { analyzeVerifiedPremium, AnalysisResult } from "@/lib/analysis";
+import { analyzeVerifiedPremium } from "@/lib/analysis";
 import cvxLogo from "@/assets/cvx-logo.png";
+
+interface AnalysisResult {
+  score: number;
+  summary: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  improvements?: string[];
+  missingKeywords?: string[];
+  suggestedJobTitles?: string[];
+}
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -142,7 +152,7 @@ const PaymentSuccess = () => {
             <div className="p-6 md:p-8 rounded-2xl bg-card border border-border shadow-card-premium space-y-6">
               {/* Score */}
               <div className="text-center py-6">
-                <div className="text-6xl font-bold font-display text-gradient mb-2">
+                <div className="text-6xl font-bold font-display text-foreground mb-2">
                   {result.score}%
                 </div>
                 <p className="text-muted-foreground">Compatibilidade com a vaga</p>
@@ -150,8 +160,10 @@ const PaymentSuccess = () => {
 
               {/* Summary */}
               <div className="p-4 rounded-xl bg-secondary/50 border border-border">
-                <h4 className="font-semibold text-foreground mb-2">Resumo</h4>
-                <p className="text-sm text-muted-foreground">{result.summary}</p>
+                <h4 className="font-semibold text-foreground mb-2">Resumo da Análise</h4>
+                <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                  {result.summary}
+                </div>
               </div>
 
               {/* Strengths */}
@@ -219,6 +231,26 @@ const PaymentSuccess = () => {
                         className="px-3 py-1.5 text-xs rounded-lg bg-accent/10 text-accent font-medium border border-accent/20"
                       >
                         {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Suggested Job Titles */}
+              {result.suggestedJobTitles && result.suggestedJobTitles.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-primary" />
+                    Vagas Mais Adequadas ao Seu Perfil
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {result.suggestedJobTitles.map((title, i) => (
+                      <span
+                        key={i}
+                        className="px-3 py-1.5 text-sm rounded-lg bg-primary/10 text-primary font-medium border border-primary/20"
+                      >
+                        {title}
                       </span>
                     ))}
                   </div>
