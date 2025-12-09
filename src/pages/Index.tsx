@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Sparkles, 
   Zap, 
@@ -45,6 +46,7 @@ const Index = () => {
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
   const { toast } = useToast();
   const { user, session } = useAuth();
+  const navigate = useNavigate();
 
   // Check subscription status when user is logged in
   useEffect(() => {
@@ -59,6 +61,12 @@ const Index = () => {
         const { data, error } = await supabase.functions.invoke("check-subscription");
         if (error) throw error;
         setSubscription(data);
+        
+        // Redirect to members page if user has active subscription
+        if (data?.subscribed === true) {
+          navigate("/members");
+          return;
+        }
       } catch (error) {
         console.error("Error checking subscription:", error);
         setSubscription(null);
@@ -68,7 +76,7 @@ const Index = () => {
     };
 
     checkSubscription();
-  }, [session]);
+  }, [session, navigate]);
 
   const hasActiveSubscription = subscription?.subscribed === true;
   const canUpgrade = hasActiveSubscription && (
