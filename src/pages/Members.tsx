@@ -599,7 +599,9 @@ const Members = () => {
           </Tabs>
 
           {/* Upgrade Section - show for all non-advanced users */}
-          {subscription.subscribed && subscription.product_id !== "prod_SoLNjxp9RQNJIo" && subscription.product_id !== "prod_TY5ZiELFu8XH7y" && (
+          {subscription.subscribed && 
+           subscription.product_id !== "prod_SoLNjxp9RQNJIo" && 
+           subscription.product_id !== "prod_TY5ZiELFu8XH7y" && (
             <UpgradeSection currentProductId={subscription.product_id} />
           )}
 

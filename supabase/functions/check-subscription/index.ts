@@ -14,16 +14,20 @@ const logStep = (step: string, details?: any) => {
 
 // Product limits mapping
 const PRODUCT_LIMITS: Record<string, number> = {
-  "prod_SoLMeWK4h9D90o": 8,       // CVX Básico - 8 analyses
-  "prod_SoLNLB46DyQGr1": 12,      // CVX Intermediário - 12 analyses
-  "prod_SoLNjxp9RQNJIo": 999999,  // CVX Avançado - unlimited
-  "prod_TY5ZiELFu8XH7y": 999999,  // CVX Avançado (alternate) - unlimited
+  "prod_SoLMeWK4h9D90o": 8,       // CVX Básico (old) - 8 analyses
+  "prod_SoLNLB46DyQGr1": 12,      // CVX Intermediário (old) - 12 analyses
+  "prod_SoLNjxp9RQNJIo": 999999,  // CVX Avançado (old) - unlimited
+  "prod_TY5YW5pWY0NLax": 8,       // CVX Básico - 8 analyses
+  "prod_TY5ZXRFPInS0UH": 12,      // CVX Intermediário - 12 analyses
+  "prod_TY5ZiELFu8XH7y": 999999,  // CVX Avançado - unlimited
 };
 
 const PRODUCT_NAMES: Record<string, string> = {
   "prod_SoLMeWK4h9D90o": "CVX Básico",
   "prod_SoLNLB46DyQGr1": "CVX Intermediário",
   "prod_SoLNjxp9RQNJIo": "CVX Avançado",
+  "prod_TY5YW5pWY0NLax": "CVX Básico",
+  "prod_TY5ZXRFPInS0UH": "CVX Intermediário",
   "prod_TY5ZiELFu8XH7y": "CVX Avançado",
 };
 
