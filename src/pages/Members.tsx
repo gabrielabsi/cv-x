@@ -27,6 +27,8 @@ import { getCloudHistory, HistoryItem } from "@/lib/history";
 import { AnalysisModal } from "@/components/AnalysisModal";
 import { SubscriptionCard } from "@/components/SubscriptionCard";
 import { MemberAnalysisForm } from "@/components/MemberAnalysisForm";
+import { UpgradeSection } from "@/components/UpgradeSection";
+import { MentorshipSection } from "@/components/MentorshipSection";
 import { AnalysisLoading } from "@/components/AnalysisLoading";
 import { AnalysisResult } from "@/lib/analysis";
 import cvxLogo from "@/assets/cvx-logo.png";
@@ -44,6 +46,7 @@ interface ExtendedProfile {
 
 interface SubscriptionInfo {
   subscribed: boolean;
+  product_id: string | null;
   product_name: string | null;
   subscription_end: string | null;
   analyses_used: number;
@@ -78,6 +81,7 @@ const Members = () => {
   // Subscription state
   const [subscription, setSubscription] = useState<SubscriptionInfo>({
     subscribed: false,
+    product_id: null,
     product_name: null,
     subscription_end: null,
     analyses_used: 0,
@@ -115,6 +119,7 @@ const Members = () => {
         if (data) {
           setSubscription({
             subscribed: data.subscribed || false,
+            product_id: data.product_id || null,
             product_name: data.product_name || null,
             subscription_end: data.subscription_end || null,
             analyses_used: data.analyses_used || 0,
@@ -592,6 +597,16 @@ const Members = () => {
               )}
             </TabsContent>
           </Tabs>
+
+          {/* Upgrade Section - show for all non-advanced users */}
+          {subscription.subscribed && subscription.product_id !== "prod_SoLNjxp9RQNJIo" && (
+            <UpgradeSection currentProductId={subscription.product_id} />
+          )}
+
+          {/* Mentorship Section - show for all subscribed users */}
+          {subscription.subscribed && (
+            <MentorshipSection />
+          )}
         </div>
       </main>
 

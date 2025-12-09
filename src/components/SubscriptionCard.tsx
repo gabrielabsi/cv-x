@@ -1,11 +1,15 @@
-import { TrendingUp, Crown, AlertCircle } from "lucide-react";
+import { TrendingUp, Crown, AlertCircle, ArrowUp, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface SubscriptionInfo {
   subscribed: boolean;
+  product_id?: string | null;
   product_name: string | null;
   subscription_end: string | null;
   analyses_used: number;
@@ -23,11 +27,37 @@ export const SubscriptionCard = ({
   onGenerateAnalysis,
   isLoading 
 }: SubscriptionCardProps) => {
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const { toast } = useToast();
+  
   const isUnlimited = subscription.analyses_limit >= 999999;
   const usagePercentage = isUnlimited 
     ? 0 
     : (subscription.analyses_used / subscription.analyses_limit) * 100;
   const hasReachedLimit = !isUnlimited && subscription.analyses_used >= subscription.analyses_limit;
+  const isAdvancedUser = subscription.product_id === "prod_SoLNjxp9RQNJIo";
+
+  const handleUpgrade = async () => {
+    setIsUpgrading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { productType: "avancado" }
+      });
+
+      if (error) throw error;
+      if (!data?.url) throw new Error("Falha ao criar sessão de pagamento");
+
+      window.open(data.url, "_blank");
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
 
   if (!subscription.subscribed) {
     return (
@@ -82,7 +112,7 @@ export const SubscriptionCard = ({
         {!isUnlimited && (
           <Progress 
             value={usagePercentage} 
-            className="h-2"
+            className={`h-2 ${hasReachedLimit ? '[&>div]:bg-destructive' : ''}`}
           />
         )}
         {isUnlimited && (
@@ -92,20 +122,44 @@ export const SubscriptionCard = ({
         )}
       </div>
 
-      {/* Generate Analysis Button */}
-      <Button 
-        variant="hero" 
-        className="w-full"
-        onClick={onGenerateAnalysis}
-        disabled={hasReachedLimit || isLoading}
-      >
-        <TrendingUp className="w-4 h-4 mr-2" />
-        {hasReachedLimit ? "Limite Atingido" : "Gerar Análise Detalhada"}
-      </Button>
+      {/* Limit Reached - Prominent Upgrade CTA */}
+      {hasReachedLimit && !isAdvancedUser && (
+        <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 animate-pulse-ring">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-foreground">Limite Atingido!</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">
+            Faça upgrade para continuar gerando análises detalhadas
+          </p>
+          <Button 
+            variant="hero" 
+            className="w-full"
+            onClick={handleUpgrade}
+            disabled={isUpgrading}
+          >
+            <ArrowUp className="w-4 h-4 mr-2" />
+            {isUpgrading ? "Aguarde..." : "Fazer Upgrade Agora"}
+          </Button>
+        </div>
+      )}
 
-      {hasReachedLimit && (
-        <p className="text-xs text-destructive text-center mt-2">
-          Você atingiu o limite de análises deste período
+      {/* Generate Analysis Button */}
+      {!hasReachedLimit && (
+        <Button 
+          variant="hero" 
+          className="w-full"
+          onClick={onGenerateAnalysis}
+          disabled={isLoading}
+        >
+          <TrendingUp className="w-4 h-4 mr-2" />
+          Gerar Análise Detalhada
+        </Button>
+      )}
+
+      {hasReachedLimit && isAdvancedUser && (
+        <p className="text-xs text-destructive text-center">
+          Erro: você não deveria ver essa mensagem. Entre em contato com o suporte.
         </p>
       )}
     </div>
