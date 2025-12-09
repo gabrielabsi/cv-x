@@ -22,9 +22,10 @@ const PRICE_IDS = {
 
 // Coupon IDs - normalized to uppercase for case-insensitive matching
 const COUPON_IDS: Record<string, string> = {
-  "PRIMEIROCVX": "lTRTOJmX",
-  "NOVAVERSAO": "YOciUg9Z",
-  "NOVAVERSAO10": "9bPMdAJA",
+  "PRIMEIROCVX": "Olpizqrc",
+  "NOVAVERSAO": "m4JTy2oX",
+  "NOVAVERSAO10": "MMqEDueX",
+  "CUPONTESTEGABSI": "zawoQTFa",
 };
 
 serve(async (req) => {
