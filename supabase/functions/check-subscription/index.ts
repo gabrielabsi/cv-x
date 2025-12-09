@@ -101,13 +101,23 @@ serve(async (req) => {
       const subscription = subscriptions.data[0];
       stripeSubscriptionId = subscription.id;
       
-      // Safely parse dates with validation
+      const now = new Date();
+      
+      // Safely parse dates with fallbacks
       if (subscription.current_period_end && typeof subscription.current_period_end === 'number') {
         subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
         periodEnd = subscriptionEnd;
+      } else {
+        // Fallback: 30 days from now
+        periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        subscriptionEnd = periodEnd;
       }
+      
       if (subscription.current_period_start && typeof subscription.current_period_start === 'number') {
         periodStart = new Date(subscription.current_period_start * 1000).toISOString();
+      } else {
+        // Fallback: current time
+        periodStart = now.toISOString();
       }
       
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
