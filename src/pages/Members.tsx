@@ -11,7 +11,8 @@ import {
   Save,
   Loader2,
   X,
-  FileText
+  FileText,
+  LogOut
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -54,7 +55,7 @@ interface SubscriptionInfo {
 }
 
 const Members = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -317,6 +318,14 @@ const Members = () => {
             </Button>
             <img src={cvxLogo} alt="CVX" className="h-10 w-auto" />
           </div>
+          <Button 
+            variant="ghost" 
+            onClick={() => signOut()}
+            className="gap-2 text-muted-foreground hover:text-destructive"
+          >
+            <LogOut className="w-4 h-4" />
+            Sair
+          </Button>
         </div>
       </header>
 
