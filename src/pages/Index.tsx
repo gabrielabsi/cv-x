@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Sparkles, 
   Zap, 
@@ -17,11 +17,22 @@ import { ResumeInput } from "@/components/ResumeInput";
 import { AnalysisModal } from "@/components/AnalysisModal";
 import { UserMenu } from "@/components/UserMenu";
 import { PricingSection } from "@/components/PricingSection";
+import { UpgradeSection } from "@/components/UpgradeSection";
+import { MentorshipSection } from "@/components/MentorshipSection";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { analyzeFree, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
 import { supabase } from "@/integrations/supabase/client";
 import cvxLogo from "@/assets/cvx-logo.png";
+
+interface SubscriptionInfo {
+  subscribed: boolean;
+  product_id: string | null;
+  product_name: string | null;
+  analyses_used: number;
+  analyses_limit: number;
+}
+
 const Index = () => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -30,8 +41,41 @@ const Index = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPremiumResult, setIsPremiumResult] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
+
+  // Check subscription status when user is logged in
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!session) {
+        setSubscription(null);
+        return;
+      }
+
+      setIsCheckingSubscription(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("check-subscription");
+        if (error) throw error;
+        setSubscription(data);
+      } catch (error) {
+        console.error("Error checking subscription:", error);
+        setSubscription(null);
+      } finally {
+        setIsCheckingSubscription(false);
+      }
+    };
+
+    checkSubscription();
+  }, [session]);
+
+  const hasActiveSubscription = subscription?.subscribed === true;
+  const canUpgrade = hasActiveSubscription && (
+    subscription?.product_id === "prod_SoLMeWK4h9D90o" || // Basic
+    subscription?.product_id === "prod_SoLNLB46DyQGr1"    // Intermediate
+  );
+  const isAdvancedUser = subscription?.product_id === "prod_SoLNjxp9RQNJIo";
 
   const handleAnalyze = async () => {
     if (!jobDescription.trim() || jobDescription.trim().length < 50) {
@@ -61,15 +105,59 @@ const Index = () => {
         resumeText = await extractTextFromFile(selectedFile);
       }
 
-      const result = await analyzeFree({
-        resumeText: resumeText || undefined,
-        linkedInUrl: linkedInUrl.trim() || undefined,
-        jobDescription: jobDescription.trim(),
-      });
+      // If user has active subscription, do premium analysis
+      if (hasActiveSubscription) {
+        // Check usage limits
+        const isUnlimited = subscription.analyses_limit >= 999999;
+        if (!isUnlimited && subscription.analyses_used >= subscription.analyses_limit) {
+          toast({
+            title: "Limite de análises atingido",
+            description: "Você atingiu o limite de análises do seu plano este mês. Faça upgrade para continuar.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
 
-      setAnalysisResult(result);
-      setIsPremiumResult(false);
-      setIsModalOpen(true);
+        // Increment usage
+        const { error: usageError } = await supabase.functions.invoke("increment-usage");
+        if (usageError) {
+          console.error("Error incrementing usage:", usageError);
+        }
+
+        // Do premium analysis via analyze-resume
+        const { data, error } = await supabase.functions.invoke("analyze-resume", {
+          body: {
+            resumeText: resumeText || undefined,
+            linkedInUrl: linkedInUrl.trim() || undefined,
+            jobDescription: jobDescription.trim(),
+            type: "premium"
+          }
+        });
+
+        if (error) throw error;
+        
+        setAnalysisResult(data);
+        setIsPremiumResult(true);
+        setIsModalOpen(true);
+
+        // Update local subscription state
+        setSubscription(prev => prev ? {
+          ...prev,
+          analyses_used: prev.analyses_used + 1
+        } : null);
+      } else {
+        // Free analysis
+        const result = await analyzeFree({
+          resumeText: resumeText || undefined,
+          linkedInUrl: linkedInUrl.trim() || undefined,
+          jobDescription: jobDescription.trim(),
+        });
+
+        setAnalysisResult(result);
+        setIsPremiumResult(false);
+        setIsModalOpen(true);
+      }
     } catch (error) {
       toast({
         title: "Erro na análise",
@@ -301,27 +389,43 @@ const Index = () => {
                 </p>
               </div>
 
-              {/* Submit */}
+              {/* Submit - Different text based on subscription */}
               <Button
                 variant="hero"
                 className="w-full group"
                 onClick={handleAnalyze}
-                disabled={isLoading}
+                disabled={isLoading || isCheckingSubscription}
               >
                 <TrendingUp className="w-5 h-5" />
-                Gerar Análise Gratuita
+                {hasActiveSubscription ? "Gerar Análise Detalhada" : "Gerar Análise Gratuita"}
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
 
               <p className="text-xs text-center text-muted-foreground">
-                Análise gratuita • Sem cadastro necessário • Resultado em segundos
+                {hasActiveSubscription 
+                  ? `Plano ${subscription?.product_name || 'Ativo'} • ${subscription?.analyses_limit >= 999999 ? 'Análises ilimitadas' : `${subscription?.analyses_used || 0}/${subscription?.analyses_limit || 0} análises utilizadas`}`
+                  : "Análise gratuita • Sem cadastro necessário • Resultado em segundos"
+                }
               </p>
             </div>
           </div>
         </div>
 
-        {/* Pricing Section */}
-        <PricingSection />
+        {/* Conditional Sections based on subscription */}
+        {hasActiveSubscription ? (
+          <>
+            {/* Show upgrade section for basic/intermediate users */}
+            {canUpgrade && (
+              <UpgradeSection currentProductId={subscription?.product_id || null} />
+            )}
+            
+            {/* Show mentorship section for all subscribed users */}
+            <MentorshipSection />
+          </>
+        ) : (
+          /* Show pricing section for non-subscribed users */
+          <PricingSection />
+        )}
 
         {/* Contact Section */}
         <div className="text-center mt-16 animate-fade-up">
