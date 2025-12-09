@@ -56,15 +56,15 @@ export function MentorshipSection() {
             {/* Photo & Basic Info */}
             <div className="text-center md:text-left">
               <div className="relative inline-block mb-6">
-                <div className="w-48 h-48 rounded-2xl overflow-hidden border-2 border-accent/30 shadow-lg mx-auto md:mx-0">
+                <div className="w-72 h-72 md:w-80 md:h-80 rounded-2xl overflow-hidden border-2 border-accent/30 shadow-lg mx-auto md:mx-0">
                   <img 
                     src={marcelaPhoto} 
                     alt="Marcela Absi - Mentora de Carreira" 
                     className="w-full h-full object-cover object-top"
                   />
                 </div>
-                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-accent flex items-center justify-center shadow-lg">
-                  <Award className="w-5 h-5 text-accent-foreground" />
+                <div className="absolute -bottom-3 -right-3 w-12 h-12 rounded-full bg-accent flex items-center justify-center shadow-lg">
+                  <Award className="w-6 h-6 text-accent-foreground" />
                 </div>
               </div>
               
