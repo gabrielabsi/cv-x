@@ -80,8 +80,17 @@ serve(async (req) => {
     // Determine the price ID and mode
     const priceId = PRICE_IDS[productType as keyof typeof PRICE_IDS] || PRICE_IDS.premium_single;
     const isSubscription = ["basico", "intermediario", "avancado"].includes(productType);
+    const isMentoria = productType === "mentoria";
     
-    logStep("Checkout config", { priceId, isSubscription, productType });
+    logStep("Checkout config", { priceId, isSubscription, isMentoria, productType });
+
+    // Determine success URL based on product type
+    let successUrl = `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+    if (isSubscription) {
+      successUrl = `${origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`;
+    } else if (isMentoria) {
+      successUrl = `${origin}/mentorship-success?session_id={CHECKOUT_SESSION_ID}`;
+    }
 
     // Build checkout session config
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
@@ -94,9 +103,7 @@ serve(async (req) => {
         },
       ],
       mode: isSubscription ? "subscription" : "payment",
-      success_url: isSubscription 
-        ? `${origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`
-        : `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: successUrl,
       cancel_url: `${origin}/?canceled=true`,
       allow_promotion_codes: true,
     };
