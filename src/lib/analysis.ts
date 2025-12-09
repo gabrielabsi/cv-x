@@ -14,6 +14,10 @@ export interface AnalysisResult {
   improvements?: string[];
   missingKeywords?: string[];
   suggestedJobTitles?: string[];
+  detailedExplanation?: string;
+  risks?: string[];
+  jobTitle?: string;
+  company?: string | null;
 }
 
 export async function analyzeFree(input: AnalysisInput): Promise<AnalysisResult> {

@@ -87,19 +87,26 @@ export const MemberAnalysisForm = ({
 
         if (error) throw error;
 
+        console.log("Premium analysis result:", data);
+
         // Save to history
-        if (user) {
-          await saveToCloudHistory(user.id, {
-            jobTitle: data.jobTitle || "Análise de Vaga",
-            company: data.company,
-            score: data.score,
-            summary: data.summary,
-            strengths: data.strengths,
-            weaknesses: data.weaknesses,
-            improvements: data.improvements,
-            missingKeywords: data.missingKeywords,
-            isPremium: true,
-          });
+        if (user && data) {
+          try {
+            await saveToCloudHistory(user.id, {
+              jobTitle: data.jobTitle || "Análise de Vaga",
+              company: data.company,
+              score: data.score,
+              summary: data.summary,
+              strengths: data.strengths,
+              weaknesses: data.weaknesses,
+              improvements: data.improvements,
+              missingKeywords: data.missingKeywords,
+              isPremium: true,
+            });
+            console.log("History saved successfully");
+          } catch (historyError) {
+            console.error("Error saving history:", historyError);
+          }
         }
 
         onUsageIncremented();
@@ -117,15 +124,22 @@ export const MemberAnalysisForm = ({
 
         if (error) throw error;
 
+        console.log("Free analysis result:", data);
+
         // Save to history
-        if (user) {
-          await saveToCloudHistory(user.id, {
-            jobTitle: data.jobTitle || "Análise de Vaga",
-            company: data.company,
-            score: data.score,
-            summary: data.summary,
-            isPremium: false,
-          });
+        if (user && data) {
+          try {
+            await saveToCloudHistory(user.id, {
+              jobTitle: data.jobTitle || "Análise de Vaga",
+              company: data.company,
+              score: data.score,
+              summary: data.summary,
+              isPremium: false,
+            });
+            console.log("Free history saved successfully");
+          } catch (historyError) {
+            console.error("Error saving free history:", historyError);
+          }
         }
 
         onAnalysisComplete(data, false);

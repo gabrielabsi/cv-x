@@ -31,7 +31,7 @@ export const AnalysisLoading = () => {
   }, []);
 
   return (
-    <Dialog open={true}>
+    <Dialog open={true} modal={true}>
       <DialogContent className="sm:max-w-md bg-card border-border" hideCloseButton>
         <div className="flex flex-col items-center py-6">
           {/* AI Icon */}
