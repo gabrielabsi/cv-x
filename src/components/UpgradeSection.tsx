@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface UpgradeSectionProps {
   currentProductId: string | null;
+  showAllPlans?: boolean;
 }
 
 interface UpgradePlan {
@@ -18,7 +19,20 @@ interface UpgradePlan {
   productId: string;
 }
 
-const upgradePlans: UpgradePlan[] = [
+const allPlans: UpgradePlan[] = [
+  {
+    id: "basico",
+    name: "CVX Básico",
+    price: "R$ 16,99",
+    analyses: "8 análises/mês",
+    icon: Crown,
+    productId: "prod_SoLMeWK4h9D90o",
+    features: [
+      "8 análises completas por mês",
+      "Relatório PDF detalhado",
+      "Suporte por email",
+    ],
+  },
   {
     id: "intermediario",
     name: "CVX Intermediário",
@@ -48,21 +62,31 @@ const upgradePlans: UpgradePlan[] = [
   },
 ];
 
-export function UpgradeSection({ currentProductId }: UpgradeSectionProps) {
+export function UpgradeSection({ currentProductId, showAllPlans = false }: UpgradeSectionProps) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Filter plans based on current subscription
-  const availablePlans = upgradePlans.filter(plan => {
-    if (currentProductId === "prod_SoLMeWK4h9D90o") {
-      // Basic user can upgrade to both
+  const availablePlans = allPlans.filter(plan => {
+    // If showing all plans (for non-subscribers), show all
+    if (showAllPlans || !currentProductId) {
       return true;
+    }
+    
+    // Advanced users don't need upgrade
+    if (currentProductId === "prod_SoLNjxp9RQNJIo") {
+      return false;
+    }
+    
+    if (currentProductId === "prod_SoLMeWK4h9D90o") {
+      // Basic user can upgrade to intermediate or advanced
+      return plan.id === "intermediario" || plan.id === "avancado";
     }
     if (currentProductId === "prod_SoLNLB46DyQGr1") {
       // Intermediate user can only upgrade to advanced
       return plan.id === "avancado";
     }
-    return false;
+    return true;
   });
 
   const handleUpgrade = async (planId: string) => {
