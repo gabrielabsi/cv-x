@@ -9,11 +9,12 @@ const corsHeaders = {
 
 const OPENAI_API_KEY = Deno.env.get("Open_AI");
 
-// Input validation schema - free analysis only (premium handled by verify-payment)
+// Input validation schema
 const inputSchema = z.object({
   resumeText: z.string().max(100000, "Resume text too long").optional(),
   linkedInUrl: z.string().url("Invalid LinkedIn URL").max(500).optional(),
   jobDescription: z.string().min(50, "Job description too short").max(50000, "Job description too long"),
+  type: z.enum(["free", "premium"]).optional().default("free"),
 });
 
 async function callOpenAI(systemPrompt: string, userPrompt: string, jsonMode = true) {
@@ -99,52 +100,67 @@ async function analyzeFit(
   jobSummaryJson: any,
   mode: "free" | "premium" = "free"
 ) {
-  const systemPrompt = `Você é um avaliador profissional de currículos e recrutador especializado. Sua tarefa é comparar o perfil do candidato com os requisitos da vaga e gerar uma análise de compatibilidade.
+  const systemPrompt = `
+Você é um especialista em carreira, recrutamento e análise de compatibilidade entre candidato e vaga.
+Seu estilo é direto, estratégico, claro, honesto e altamente analítico.
+Sua missão é avaliar o FIT entre um candidato e uma vaga, oferecendo insights precisos.
 
-REGRAS IMPORTANTES:
-- Base sua análise APENAS nos dados fornecidos nos JSONs
-- O termômetro de fit (0-100) deve refletir a compatibilidade real
-- Seja honesto mas construtivo nas avaliações
-- Se houver poucas informações, faça uma avaliação conservadora mas útil
+REGRAS:
+- Baseie a análise APENAS nos dados dos JSONs fornecidos.
+- Seja objetivo, mas com opinião profissional.
+- Não repita textos da vaga ou do currículo — interprete.
+- Mostre clareza sobre pontos fortes, gaps e riscos.
+- Sempre gere respostas úteis, mesmo que as informações estejam incompletas.
 
-CRITÉRIOS DE PONTUAÇÃO:
-- 80-100: Excelente fit - candidato atende maioria dos requisitos obrigatórios e vários desejáveis
-- 60-79: Bom fit - candidato atende requisitos principais, pode precisar de algumas adaptações
-- 40-59: Fit moderado - candidato atende alguns requisitos, mas tem gaps significativos
-- 20-39: Fit baixo - candidato atende poucos requisitos, precisaria de muito desenvolvimento
-- 0-19: Fit muito baixo - perfil muito diferente do exigido`;
+TERMÔMETRO DE FIT:
+80-100 → Excelente fit
+60-79 → Bom fit
+40-59 → Moderado
+20-39 → Baixo
+0-19 → Muito baixo
+`;
 
   const userPrompt = mode === "free"
-    ? `Compare o perfil do candidato com a vaga e retorne APENAS este JSON:
+    ? `
+Compare o perfil do candidato com a vaga e retorne APENAS este JSON:
 
 {
-  "termometro_fit": (número de 0 a 100),
-  "justificativa_resumida": "(2-3 frases explicando o score de forma construtiva)"
+  "termometro_fit": (número entre 0 e 100),
+  "justificativa_resumida": "(2-3 frases explicando o score de forma clara e honesta)"
+}
+
+Avalie:
+- requisitos obrigatórios e desejáveis
+- habilidades técnicas e comportamentais
+- senioridade
+- riscos e gaps reais
+
+PERFIL DO CANDIDATO:
+${JSON.stringify(resumeSummaryJson, null, 2)}
+
+VAGA:
+${JSON.stringify(jobSummaryJson, null, 2)}
+`
+    : `
+Compare detalhadamente o perfil do candidato com a vaga e retorne este JSON:
+
+{
+  "termometro_fit": (0 a 100),
+  "justificativa_resumida": "(2-3 frases)",
+  "forcas": ["mínimo 3 pontos fortes relevantes"],
+  "fraquezas": ["mínimo 2 gaps reais"],
+  "palavras_chave_faltantes": ["habilidades exigidas que não aparecem no currículo"],
+  "riscos": ["possíveis objeções de recrutadores"],
+  "oportunidades_melhoria_curriculo": ["como melhorar o currículo para esta vaga"],
+  "explicacao_detalhada": "parágrafo aprofundado explicando a análise"
 }
 
 PERFIL DO CANDIDATO:
 ${JSON.stringify(resumeSummaryJson, null, 2)}
 
-REQUISITOS DA VAGA:
-${JSON.stringify(jobSummaryJson, null, 2)}`
-    : `Compare detalhadamente o perfil do candidato com a vaga e retorne este JSON completo:
-
-{
-  "termometro_fit": (número de 0 a 100),
-  "justificativa_resumida": "(2-3 frases resumindo a compatibilidade)",
-  "forcas": ["pontos fortes do candidato para esta vaga - mínimo 3 itens"],
-  "fraquezas": ["gaps ou pontos a desenvolver - mínimo 2 itens"],
-  "palavras_chave_faltantes": ["termos/habilidades da vaga ausentes no currículo"],
-  "riscos": ["possíveis objeções que recrutadores podem ter"],
-  "oportunidades_melhoria_curriculo": ["sugestões práticas para melhorar o currículo para esta vaga"],
-  "explicacao_detalhada": "(parágrafo detalhado explicando a análise)"
-}
-
-PERFIL DO CANDIDATO:
-${JSON.stringify(resumeSummaryJson, null, 2)}
-
-REQUISITOS DA VAGA:
-${JSON.stringify(jobSummaryJson, null, 2)}`;
+VAGA:
+${JSON.stringify(jobSummaryJson, null, 2)}
+`;
 
   return await callOpenAI(systemPrompt, userPrompt);
 }
@@ -167,7 +183,8 @@ serve(async (req) => {
       );
     }
     
-    const { resumeText, linkedInUrl, jobDescription } = validationResult.data;
+    const { resumeText, linkedInUrl, jobDescription, type } = validationResult.data;
+    const isPremium = type === "premium";
 
     if (!OPENAI_API_KEY) {
       throw new Error("OpenAI API key not configured");
@@ -185,7 +202,7 @@ serve(async (req) => {
     const jobText = jobDescription;
     const resumeContent = resumeText || `LinkedIn Profile URL: ${linkedInUrl}\n\nNOTA: Analise com base no perfil típico de um profissional com este LinkedIn. Se não conseguir acessar, forneça uma análise genérica baseada no cargo mencionado na vaga.`;
 
-    console.log("Starting free analysis...", { hasResume: !!resumeText, hasLinkedIn: !!linkedInUrl });
+    console.log("Starting analysis...", { hasResume: !!resumeText, hasLinkedIn: !!linkedInUrl, type });
 
     // 1) Summarize resume
     const resumeSummary = await summarizeResume(resumeContent);
@@ -195,14 +212,27 @@ serve(async (req) => {
     const jobSummary = await summarizeJob(jobText);
     console.log("Job summarized");
 
-    // 3) Analyze fit - always free mode (premium handled by verify-payment endpoint)
-    const analysis = await analyzeFit(resumeSummary, jobSummary, "free");
+    // 3) Analyze fit
+    const analysis = await analyzeFit(resumeSummary, jobSummary, isPremium ? "premium" : "free");
     console.log("Analysis complete");
 
-    // Map response to expected format (free tier only)
-    const result = {
+    // Map response to expected format
+    const result = isPremium ? {
       score: analysis.termometro_fit,
       summary: analysis.justificativa_resumida,
+      strengths: analysis.forcas,
+      weaknesses: analysis.fraquezas,
+      improvements: analysis.oportunidades_melhoria_curriculo,
+      missingKeywords: analysis.palavras_chave_faltantes,
+      detailedExplanation: analysis.explicacao_detalhada,
+      risks: analysis.riscos,
+      jobTitle: jobSummary.titulo || "Análise de Vaga",
+      company: jobSummary.empresa || null,
+    } : {
+      score: analysis.termometro_fit,
+      summary: analysis.justificativa_resumida,
+      jobTitle: jobSummary.titulo || "Análise de Vaga",
+      company: jobSummary.empresa || null,
     };
 
     return new Response(JSON.stringify(result), {

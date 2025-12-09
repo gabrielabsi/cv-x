@@ -5,8 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ResumeInput } from "@/components/ResumeInput";
 import { useToast } from "@/hooks/use-toast";
-import { analyzeFree, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
+import { extractTextFromFile, AnalysisResult } from "@/lib/analysis";
 import { supabase } from "@/integrations/supabase/client";
+import { saveToCloudHistory } from "@/lib/history";
+import { useAuth } from "@/hooks/useAuth";
+import { AnalysisLoading } from "@/components/AnalysisLoading";
 
 interface MemberAnalysisFormProps {
   hasActiveSubscription: boolean;
@@ -26,6 +29,7 @@ export const MemberAnalysisForm = ({
   const [jobDescription, setJobDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleAnalyze = async (generatePremium: boolean) => {
     if (!jobDescription.trim() || jobDescription.trim().length < 50) {
@@ -83,17 +87,48 @@ export const MemberAnalysisForm = ({
 
         if (error) throw error;
 
+        // Save to history
+        if (user) {
+          await saveToCloudHistory(user.id, {
+            jobTitle: data.jobTitle || "Análise de Vaga",
+            company: data.company,
+            score: data.score,
+            summary: data.summary,
+            strengths: data.strengths,
+            weaknesses: data.weaknesses,
+            improvements: data.improvements,
+            missingKeywords: data.missingKeywords,
+            isPremium: true,
+          });
+        }
+
         onUsageIncremented();
         onAnalysisComplete(data, true);
       } else {
         // Free analysis
-        const result = await analyzeFree({
-          resumeText: resumeText || undefined,
-          linkedInUrl: linkedInUrl.trim() || undefined,
-          jobDescription: jobDescription.trim(),
+        const { data, error } = await supabase.functions.invoke("analyze-resume", {
+          body: {
+            resumeText: resumeText || undefined,
+            linkedInUrl: linkedInUrl.trim() || undefined,
+            jobDescription: jobDescription.trim(),
+            type: "free",
+          },
         });
 
-        onAnalysisComplete(result, false);
+        if (error) throw error;
+
+        // Save to history
+        if (user) {
+          await saveToCloudHistory(user.id, {
+            jobTitle: data.jobTitle || "Análise de Vaga",
+            company: data.company,
+            score: data.score,
+            summary: data.summary,
+            isPremium: false,
+          });
+        }
+
+        onAnalysisComplete(data, false);
       }
 
       // Clear form after successful analysis
@@ -112,85 +147,88 @@ export const MemberAnalysisForm = ({
   };
 
   return (
-    <div className="p-6 rounded-2xl bg-card border border-border">
-      <div className="space-y-6">
-        {/* Resume Input */}
-        <div>
-          <Label className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">1</span>
-            Seu Currículo
-          </Label>
-          <ResumeInput
-            selectedFile={selectedFile}
-            onFileChange={setSelectedFile}
-            linkedInUrl={linkedInUrl}
-            onLinkedInChange={setLinkedInUrl}
-            isLoading={isLoading}
-          />
-        </div>
-
-        {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-        {/* Job Description */}
-        <div className="space-y-3">
-          <Label htmlFor="jobDescription" className="text-base font-semibold text-foreground flex items-center gap-2">
-            <span className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">2</span>
-            Descrição da Vaga
-          </Label>
-          <div className="relative group">
-            <div className="absolute left-4 top-4 w-5 h-5 rounded bg-accent/20 flex items-center justify-center">
-              <FileText className="w-3 h-3 text-accent" />
-            </div>
-            <Textarea
-              id="jobDescription"
-              placeholder="Cole aqui a descrição completa da vaga (requisitos, responsabilidades, qualificações...)"
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              className="pl-12 min-h-[120px] bg-secondary/50 border-border focus:border-primary focus:ring-primary/20 transition-all resize-none"
-              disabled={isLoading}
+    <>
+      {isLoading && <AnalysisLoading />}
+      <div className="p-6 rounded-2xl bg-card border border-border">
+        <div className="space-y-6">
+          {/* Resume Input */}
+          <div>
+            <Label className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">1</span>
+              Seu Currículo
+            </Label>
+            <ResumeInput
+              selectedFile={selectedFile}
+              onFileChange={setSelectedFile}
+              linkedInUrl={linkedInUrl}
+              onLinkedInChange={setLinkedInUrl}
+              isLoading={isLoading}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Copie e cole a descrição completa da vaga para uma análise mais precisa
-          </p>
-        </div>
 
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          {hasActiveSubscription && !hasReachedLimit && (
+          {/* Divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+          {/* Job Description */}
+          <div className="space-y-3">
+            <Label htmlFor="jobDescription" className="text-base font-semibold text-foreground flex items-center gap-2">
+              <span className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">2</span>
+              Descrição da Vaga
+            </Label>
+            <div className="relative group">
+              <div className="absolute left-4 top-4 w-5 h-5 rounded bg-accent/20 flex items-center justify-center">
+                <FileText className="w-3 h-3 text-accent" />
+              </div>
+              <Textarea
+                id="jobDescription"
+                placeholder="Cole aqui a descrição completa da vaga (requisitos, responsabilidades, qualificações...)"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                className="pl-12 min-h-[120px] bg-secondary/50 border-border focus:border-primary focus:ring-primary/20 transition-all resize-none"
+                disabled={isLoading}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Copie e cole a descrição completa da vaga para uma análise mais precisa
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {hasActiveSubscription && !hasReachedLimit && (
+              <Button
+                variant="hero"
+                className="flex-1 group"
+                onClick={() => handleAnalyze(true)}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <TrendingUp className="w-5 h-5" />
+                    Gerar Análise Detalhada
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </Button>
+            )}
+            
             <Button
-              variant="hero"
-              className="flex-1 group"
-              onClick={() => handleAnalyze(true)}
+              variant={hasActiveSubscription && !hasReachedLimit ? "outline" : "hero"}
+              className="flex-1"
+              onClick={() => handleAnalyze(false)}
               disabled={isLoading}
             >
-              {isLoading ? (
+              {isLoading && !hasActiveSubscription ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <>
-                  <TrendingUp className="w-5 h-5" />
-                  Gerar Análise Detalhada
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </>
+                "Gerar Análise Gratuita"
               )}
             </Button>
-          )}
-          
-          <Button
-            variant={hasActiveSubscription && !hasReachedLimit ? "outline" : "hero"}
-            className="flex-1"
-            onClick={() => handleAnalyze(false)}
-            disabled={isLoading}
-          >
-            {isLoading && !hasActiveSubscription ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              "Gerar Análise Gratuita"
-            )}
-          </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
