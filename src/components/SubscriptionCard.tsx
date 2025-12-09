@@ -124,7 +124,7 @@ export const SubscriptionCard = ({
 
       {/* Limit Reached - Prominent Upgrade CTA */}
       {hasReachedLimit && !isAdvancedUser && (
-        <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 animate-pulse-ring">
+        <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-5 h-5 text-primary" />
             <span className="font-semibold text-foreground">Limite Atingido!</span>
