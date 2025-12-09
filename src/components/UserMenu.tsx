@@ -1,4 +1,4 @@
-import { LogOut, Cloud, LogIn, UserPlus } from "lucide-react";
+import { LogOut, Cloud, LogIn, UserPlus, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +67,15 @@ export function UserMenu() {
           </div>
         </div>
         <DropdownMenuSeparator className="bg-border" />
+        <DropdownMenuItem 
+          className="gap-2.5 text-muted-foreground py-2.5 cursor-pointer"
+          onClick={() => navigate("/members")}
+        >
+          <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center">
+            <User className="w-3 h-3 text-primary" />
+          </div>
+          Minha Conta
+        </DropdownMenuItem>
         <DropdownMenuItem className="gap-2.5 text-muted-foreground py-2.5 cursor-default">
           <div className="w-5 h-5 rounded bg-accent/20 flex items-center justify-center">
             <Cloud className="w-3 h-3 text-accent" />

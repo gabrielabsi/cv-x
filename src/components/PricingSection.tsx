@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Check, Zap, Crown, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Plan {
   id: string;
@@ -70,8 +72,20 @@ const plans: Plan[] = [
 export function PricingSection() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubscribe = async (planId: string) => {
+    // Require login before purchase
+    if (!user) {
+      toast({
+        title: "Login necessário",
+        description: "Faça login ou crie uma conta para assinar um plano.",
+      });
+      navigate("/auth?redirect=/");
+      return;
+    }
+    
     setLoadingPlan(planId);
     
     try {
