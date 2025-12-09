@@ -18,7 +18,7 @@ const PRICE_IDS = {
   basico: "price_1SazNiJmb1TyvE3zbLklgJmP",
   intermediario: "price_1SazNxJmb1TyvE3z9L6ywLLz",
   avancado: "price_1SazOBJmb1TyvE3zJUHhdhIQ",
-  mentoria: "price_1ScUhIJmb1TyvE3zDQQ3s61Z",
+  mentoria: "price_1ScVDFJmb1TyvE3zlpLOc3I8", // R$199 promotional price
 };
 
 // Coupon IDs - normalized to uppercase for case-insensitive matching
