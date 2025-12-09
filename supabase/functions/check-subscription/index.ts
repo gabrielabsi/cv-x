@@ -14,15 +14,17 @@ const logStep = (step: string, details?: any) => {
 
 // Product limits mapping
 const PRODUCT_LIMITS: Record<string, number> = {
-  "prod_SoLMeWK4h9D90o": 8,     // CVX Básico - 8 analyses
-  "prod_SoLNLB46DyQGr1": 12,    // CVX Intermediário - 12 analyses
-  "prod_SoLNjxp9RQNJIo": 999999, // CVX Avançado - unlimited
+  "prod_SoLMeWK4h9D90o": 8,       // CVX Básico - 8 analyses
+  "prod_SoLNLB46DyQGr1": 12,      // CVX Intermediário - 12 analyses
+  "prod_SoLNjxp9RQNJIo": 999999,  // CVX Avançado - unlimited
+  "prod_TY5ZiELFu8XH7y": 999999,  // CVX Avançado (alternate) - unlimited
 };
 
 const PRODUCT_NAMES: Record<string, string> = {
   "prod_SoLMeWK4h9D90o": "CVX Básico",
   "prod_SoLNLB46DyQGr1": "CVX Intermediário",
   "prod_SoLNjxp9RQNJIo": "CVX Avançado",
+  "prod_TY5ZiELFu8XH7y": "CVX Avançado",
 };
 
 serve(async (req) => {

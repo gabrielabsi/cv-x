@@ -74,7 +74,7 @@ export function UpgradeSection({ currentProductId, showAllPlans = false }: Upgra
     }
     
     // Advanced users don't need upgrade
-    if (currentProductId === "prod_SoLNjxp9RQNJIo") {
+    if (currentProductId === "prod_SoLNjxp9RQNJIo" || currentProductId === "prod_TY5ZiELFu8XH7y") {
       return false;
     }
     

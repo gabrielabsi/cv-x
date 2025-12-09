@@ -83,7 +83,7 @@ const Index = () => {
     subscription?.product_id === "prod_SoLMeWK4h9D90o" || // Basic
     subscription?.product_id === "prod_SoLNLB46DyQGr1"    // Intermediate
   );
-  const isAdvancedUser = subscription?.product_id === "prod_SoLNjxp9RQNJIo";
+  const isAdvancedUser = subscription?.product_id === "prod_SoLNjxp9RQNJIo" || subscription?.product_id === "prod_TY5ZiELFu8XH7y";
 
   const handleAnalyze = async () => {
     if (!jobDescription.trim() || jobDescription.trim().length < 50) {
