@@ -80,8 +80,10 @@ const Index = () => {
 
   const hasActiveSubscription = subscription?.subscribed === true;
   const canUpgrade = hasActiveSubscription && (
-    subscription?.product_id === "prod_SoLMeWK4h9D90o" || // Basic
-    subscription?.product_id === "prod_SoLNLB46DyQGr1"    // Intermediate
+    subscription?.product_id === "prod_SoLMeWK4h9D90o" || // Basic (old)
+    subscription?.product_id === "prod_SoLNLB46DyQGr1" || // Intermediate (old)
+    subscription?.product_id === "prod_TY5YW5pWY0NLax" || // Basic (new)
+    subscription?.product_id === "prod_TY5ZXRFPInS0UH"    // Intermediate (new)
   );
   const isAdvancedUser = subscription?.product_id === "prod_SoLNjxp9RQNJIo" || subscription?.product_id === "prod_TY5ZiELFu8XH7y";
 

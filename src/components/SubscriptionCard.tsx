@@ -35,7 +35,8 @@ export const SubscriptionCard = ({
     ? 0 
     : (subscription.analyses_used / subscription.analyses_limit) * 100;
   const hasReachedLimit = !isUnlimited && subscription.analyses_used >= subscription.analyses_limit;
-  const isAdvancedUser = subscription.product_id === "prod_SoLNjxp9RQNJIo" || subscription.product_id === "prod_TY5ZiELFu8XH7y";
+  const isAdvancedUser = subscription.product_id === "prod_SoLNjxp9RQNJIo" || 
+                         subscription.product_id === "prod_TY5ZiELFu8XH7y";
 
   const handleUpgrade = async () => {
     setIsUpgrading(true);

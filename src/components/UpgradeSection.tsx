@@ -78,14 +78,16 @@ export function UpgradeSection({ currentProductId, showAllPlans = false }: Upgra
       return false;
     }
     
-    if (currentProductId === "prod_SoLMeWK4h9D90o") {
-      // Basic user can upgrade to intermediate or advanced
+    // Basic users (old and new IDs) can upgrade to intermediate or advanced
+    if (currentProductId === "prod_SoLMeWK4h9D90o" || currentProductId === "prod_TY5YW5pWY0NLax") {
       return plan.id === "intermediario" || plan.id === "avancado";
     }
-    if (currentProductId === "prod_SoLNLB46DyQGr1") {
-      // Intermediate user can only upgrade to advanced
+    
+    // Intermediate users (old and new IDs) can only upgrade to advanced
+    if (currentProductId === "prod_SoLNLB46DyQGr1" || currentProductId === "prod_TY5ZXRFPInS0UH") {
       return plan.id === "avancado";
     }
+    
     return true;
   });
 
