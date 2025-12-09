@@ -84,8 +84,20 @@ serve(async (req) => {
     const stripeSubscriptionId = subscription.id;
     const productId = subscription.items.data[0].price.product as string;
     const analysesLimit = PRODUCT_LIMITS[productId] || 0;
-    const periodStart = new Date(subscription.current_period_start * 1000).toISOString();
-    const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+    
+    // Handle period dates - use current date if subscription dates are missing
+    const now = new Date();
+    const periodStartTimestamp = subscription.current_period_start;
+    const periodEndTimestamp = subscription.current_period_end;
+    
+    const periodStart = periodStartTimestamp 
+      ? new Date(periodStartTimestamp * 1000).toISOString()
+      : now.toISOString();
+    const periodEnd = periodEndTimestamp 
+      ? new Date(periodEndTimestamp * 1000).toISOString()
+      : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days from now
+    
+    logStep("Subscription details", { stripeSubscriptionId, productId, analysesLimit, periodStart, periodEnd });
 
     // Get current usage record
     const { data: existingUsage, error: usageError } = await supabaseClient
