@@ -18,7 +18,7 @@ interface AnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
   result: AnalysisResult | null;
-  onUpgrade: (couponCode?: string) => void;
+  onUpgrade?: (couponCode?: string) => void;
   isPremium?: boolean;
 }
 
@@ -189,7 +189,7 @@ export function AnalysisModal({ isOpen, onClose, result, onUpgrade, isPremium }:
                       </li>
                     ))}
                   </ul>
-                  <Button variant="premium" className="w-full h-12" onClick={() => onUpgrade(couponCode || undefined)}>
+                  <Button variant="premium" className="w-full h-12" onClick={() => onUpgrade?.(couponCode || undefined)}>
                     <Crown className="w-4 h-4" />
                     Obter Relatório por R$ 4,99
                     <ArrowRight className="w-4 h-4" />
