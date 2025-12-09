@@ -5,13 +5,13 @@ import {
   History, 
   Settings, 
   Calendar, 
-  TrendingUp, 
   Filter,
   Mail,
   ArrowLeft,
   Save,
   Loader2,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,6 +25,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getCloudHistory, HistoryItem } from "@/lib/history";
 import { AnalysisModal } from "@/components/AnalysisModal";
+import { SubscriptionCard } from "@/components/SubscriptionCard";
+import { MemberAnalysisForm } from "@/components/MemberAnalysisForm";
+import { AnalysisLoading } from "@/components/AnalysisLoading";
+import { AnalysisResult } from "@/lib/analysis";
 import cvxLogo from "@/assets/cvx-logo.png";
 
 interface ExtendedProfile {
@@ -36,6 +40,14 @@ interface ExtendedProfile {
   birth_date: string | null;
   phone: string | null;
   linkedin_url: string | null;
+}
+
+interface SubscriptionInfo {
+  subscribed: boolean;
+  product_name: string | null;
+  subscription_end: string | null;
+  analyses_used: number;
+  analyses_limit: number;
 }
 
 const Members = () => {
@@ -62,6 +74,23 @@ const Members = () => {
   
   const [selectedResult, setSelectedResult] = useState<HistoryItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Subscription state
+  const [subscription, setSubscription] = useState<SubscriptionInfo>({
+    subscribed: false,
+    product_name: null,
+    subscription_end: null,
+    analyses_used: 0,
+    analyses_limit: 0,
+  });
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
+  
+  // Analysis state
+  const [showAnalysisForm, setShowAnalysisForm] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+  const [isPremiumResult, setIsPremiumResult] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -69,6 +98,40 @@ const Members = () => {
       navigate("/auth?redirect=/members");
     }
   }, [authLoading, user, navigate]);
+
+  // Load subscription info
+  useEffect(() => {
+    const loadSubscription = async () => {
+      if (!user) return;
+      setIsLoadingSubscription(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("check-subscription");
+        
+        if (error) {
+          console.error("Error loading subscription:", error);
+          return;
+        }
+        
+        if (data) {
+          setSubscription({
+            subscribed: data.subscribed || false,
+            product_name: data.product_name || null,
+            subscription_end: data.subscription_end || null,
+            analyses_used: data.analyses_used || 0,
+            analyses_limit: data.analyses_limit || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Error loading subscription:", error);
+      } finally {
+        setIsLoadingSubscription(false);
+      }
+    };
+    
+    if (user) {
+      loadSubscription();
+    }
+  }, [user]);
 
   // Load history
   useEffect(() => {
@@ -191,11 +254,40 @@ const Members = () => {
     setIsModalOpen(true);
   };
 
+  const handleAnalysisComplete = (result: AnalysisResult, isPremium: boolean) => {
+    setAnalysisResult(result);
+    setIsPremiumResult(isPremium);
+    setIsAnalysisModalOpen(true);
+    setShowAnalysisForm(false);
+    
+    // Reload history
+    if (user) {
+      getCloudHistory(user.id).then(data => {
+        setHistory(data);
+        setFilteredHistory(data);
+      });
+    }
+  };
+
+  const handleUsageIncremented = () => {
+    setSubscription(prev => ({
+      ...prev,
+      analyses_used: prev.analyses_used + 1,
+    }));
+  };
+
+  const handleGenerateAnalysis = () => {
+    setShowAnalysisForm(true);
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 70) return "text-accent";
     if (score >= 40) return "text-yellow-500";
     return "text-destructive";
   };
+
+  const hasReachedLimit = subscription.analyses_limit < 999999 && 
+    subscription.analyses_used >= subscription.analyses_limit;
 
   if (authLoading) {
     return (
@@ -234,6 +326,53 @@ const Members = () => {
               Gerencie sua conta e visualize seu histórico de análises
             </p>
           </div>
+
+          {/* Subscription Card */}
+          <div className="mb-8">
+            {isLoadingSubscription ? (
+              <div className="p-6 rounded-2xl bg-card border border-border flex justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <SubscriptionCard
+                subscription={subscription}
+                onGenerateAnalysis={handleGenerateAnalysis}
+                isLoading={isAnalyzing}
+              />
+            )}
+          </div>
+
+          {/* Analysis Form */}
+          {showAnalysisForm && (
+            <div className="mb-8 animate-fade-up">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Nova Análise</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Preencha os dados para gerar sua análise
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowAnalysisForm(false)}
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <MemberAnalysisForm
+                hasActiveSubscription={subscription.subscribed}
+                hasReachedLimit={hasReachedLimit}
+                onAnalysisComplete={handleAnalysisComplete}
+                onUsageIncremented={handleUsageIncremented}
+              />
+            </div>
+          )}
 
           {/* Tabs */}
           <Tabs defaultValue="history" className="space-y-6">
@@ -292,7 +431,7 @@ const Members = () => {
                   <p className="text-muted-foreground mb-6">
                     Você ainda não realizou nenhuma análise de currículo.
                   </p>
-                  <Button variant="hero" onClick={() => navigate("/")}>
+                  <Button variant="hero" onClick={() => setShowAnalysisForm(true)}>
                     Fazer Primeira Análise
                   </Button>
                 </div>
@@ -424,37 +563,39 @@ const Members = () => {
               </div>
 
               {/* Subscription Management */}
-              <div className="p-6 rounded-2xl bg-card border border-border">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center">
-                    <X className="w-5 h-5 text-destructive" />
+              {subscription.subscribed && (
+                <div className="p-6 rounded-2xl bg-card border border-border">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center">
+                      <X className="w-5 h-5 text-destructive" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">Gerenciar Assinatura</h3>
+                      <p className="text-sm text-muted-foreground">Solicite o cancelamento da sua assinatura</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Gerenciar Assinatura</h3>
-                    <p className="text-sm text-muted-foreground">Solicite o cancelamento da sua assinatura</p>
-                  </div>
+
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Para cancelar sua assinatura, envie um email para nossa equipe de suporte. 
+                    Processaremos sua solicitação em até 48 horas úteis.
+                  </p>
+
+                  <Button 
+                    variant="outline" 
+                    className="gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
+                    onClick={handleCancelSubscription}
+                  >
+                    <Mail className="w-4 h-4" />
+                    Solicitar Cancelamento
+                  </Button>
                 </div>
-
-                <p className="text-sm text-muted-foreground mb-4">
-                  Para cancelar sua assinatura, envie um email para nossa equipe de suporte. 
-                  Processaremos sua solicitação em até 48 horas úteis.
-                </p>
-
-                <Button 
-                  variant="outline" 
-                  className="gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
-                  onClick={handleCancelSubscription}
-                >
-                  <Mail className="w-4 h-4" />
-                  Solicitar Cancelamento
-                </Button>
-              </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
       </main>
 
-      {/* Analysis Modal */}
+      {/* History Result Modal */}
       {selectedResult && (
         <AnalysisModal
           isOpen={isModalOpen}
@@ -473,6 +614,20 @@ const Members = () => {
           isPremium={selectedResult.isPremium}
         />
       )}
+
+      {/* New Analysis Result Modal */}
+      <AnalysisModal
+        isOpen={isAnalysisModalOpen}
+        onClose={() => {
+          setIsAnalysisModalOpen(false);
+          setAnalysisResult(null);
+        }}
+        result={analysisResult}
+        isPremium={isPremiumResult}
+      />
+
+      {/* Loading overlay */}
+      {isAnalyzing && <AnalysisLoading />}
     </div>
   );
 };
