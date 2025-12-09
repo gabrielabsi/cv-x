@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileSearch, Loader2, Mail, Lock, User } from "lucide-react";
+import { Loader2, Mail, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import cvxLogo from "@/assets/cvx-logo.png";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -106,108 +107,104 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen gradient-hero flex flex-col">
-      <header className="container py-6">
-        <a href="/" className="flex items-center gap-2">
-          <FileSearch className="w-8 h-8 text-primary" />
-          <span className="text-xl font-bold text-foreground">ResumeMatch</span>
+    <div className="min-h-screen gradient-hero flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md animate-fade-up">
+        {/* Logo CVX centralizado */}
+        <a href="/" className="flex justify-center mb-8">
+          <img src={cvxLogo} alt="CV-X Logo" className="h-20 w-auto" />
         </a>
-      </header>
 
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md animate-fade-up">
-          <div className="p-8 rounded-2xl bg-card border border-border shadow-card">
-            <h1 className="text-2xl font-bold text-center text-foreground mb-2">
-              {isLogin ? "Bem-vindo de volta!" : "Crie sua conta"}
-            </h1>
-            <p className="text-center text-muted-foreground mb-6">
-              {isLogin
-                ? "Entre para acessar seu histórico"
-                : "Salve suas análises na nuvem"}
-            </p>
+        <div className="p-8 rounded-2xl bg-card border border-border shadow-card">
+          <h1 className="text-2xl font-bold text-center text-foreground mb-2">
+            {isLogin ? "Bem-vindo de volta!" : "Crie sua conta"}
+          </h1>
+          <p className="text-center text-muted-foreground mb-6">
+            {isLogin
+              ? "Entre para acessar seu histórico"
+              : "Salve suas análises na nuvem"}
+          </p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Nome</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="displayName"
-                      type="text"
-                      placeholder="Seu nome"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="pl-10"
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-              )}
-
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="displayName">Nome</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="displayName"
+                    type="text"
+                    placeholder="Seu nome"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
                     className="pl-10"
                     disabled={isLoading}
                   />
                 </div>
               </div>
+            )}
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                    disabled={isLoading}
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10"
+                  disabled={isLoading}
+                />
               </div>
-
-              <Button
-                type="submit"
-                variant="hero"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {isLogin ? "Entrando..." : "Criando conta..."}
-                  </>
-                ) : (
-                  isLogin ? "Entrar" : "Criar conta"
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-primary hover:underline"
-              >
-                {isLogin
-                  ? "Não tem conta? Criar agora"
-                  : "Já tem conta? Entrar"}
-              </button>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              variant="hero"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isLogin ? "Entrando..." : "Criando conta..."}
+                </>
+              ) : (
+                isLogin ? "Entrar" : "Criar conta"
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-sm text-primary hover:underline"
+            >
+              {isLogin
+                ? "Não tem conta? Criar agora"
+                : "Já tem conta? Entrar"}
+            </button>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
