@@ -6,7 +6,8 @@ import {
   Cpu,
   TrendingUp,
   ChevronRight,
-  FileText
+  FileText,
+  Mail
 } from "lucide-react";
 import { AnalysisLoading } from "@/components/AnalysisLoading";
 import { Button } from "@/components/ui/button";
@@ -321,6 +322,21 @@ const Index = () => {
 
         {/* Pricing Section */}
         <PricingSection />
+
+        {/* Contact Section */}
+        <div className="text-center mt-16 animate-fade-up">
+          <p className="text-muted-foreground mb-4">Dúvidas ou sugestões?</p>
+          <Button
+            variant="outline"
+            asChild
+            className="gap-2"
+          >
+            <a href="mailto:contato@cvxapp.com">
+              <Mail className="w-4 h-4" />
+              Fale Conosco
+            </a>
+          </Button>
+        </div>
 
       </main>
 
