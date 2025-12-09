@@ -103,12 +103,14 @@ ${jobText.slice(0, 6000)}`;
 }
 
 async function analyzeFitPremium(resumeSummaryJson: any, jobSummaryJson: any) {
-  const systemPrompt = `Você é um avaliador profissional de currículos e recrutador especializado. Sua tarefa é comparar o perfil do candidato com os requisitos da vaga e gerar uma análise de compatibilidade detalhada.
+  const systemPrompt = `Você é um avaliador profissional de currículos e recrutador especializado com mais de 15 anos de experiência. Sua tarefa é comparar o perfil do candidato com os requisitos da vaga e gerar uma análise de compatibilidade EXTREMAMENTE detalhada e completa.
 
 REGRAS IMPORTANTES:
 - Base sua análise APENAS nos dados fornecidos nos JSONs
 - O termômetro de fit (0-100) deve refletir a compatibilidade real
 - Seja honesto mas construtivo nas avaliações
+- Forneça análises DETALHADAS e ACIONÁVEIS, não genéricas
+- Cada ponto deve ter pelo menos 2 frases explicando o contexto
 
 CRITÉRIOS DE PONTUAÇÃO:
 - 80-100: Excelente fit - candidato atende maioria dos requisitos obrigatórios e vários desejáveis
@@ -117,17 +119,40 @@ CRITÉRIOS DE PONTUAÇÃO:
 - 20-39: Fit baixo - candidato atende poucos requisitos, precisaria de muito desenvolvimento
 - 0-19: Fit muito baixo - perfil muito diferente do exigido`;
 
-  const userPrompt = `Compare detalhadamente o perfil do candidato com a vaga e retorne este JSON completo:
+  const userPrompt = `Compare detalhadamente o perfil do candidato com a vaga e retorne este JSON completo. SEJA MUITO DETALHADO em cada campo:
 
 {
   "termometro_fit": (número de 0 a 100),
-  "justificativa_resumida": "(2-3 frases resumindo a compatibilidade)",
-  "forcas": ["pontos fortes do candidato para esta vaga - mínimo 3 itens"],
-  "fraquezas": ["gaps ou pontos a desenvolver - mínimo 2 itens"],
-  "palavras_chave_faltantes": ["termos/habilidades da vaga ausentes no currículo"],
-  "riscos": ["possíveis objeções que recrutadores podem ter"],
-  "oportunidades_melhoria_curriculo": ["sugestões práticas para melhorar o currículo para esta vaga"],
-  "explicacao_detalhada": "(parágrafo detalhado explicando a análise)"
+  "justificativa_resumida": "(4-6 frases detalhadas explicando a compatibilidade geral, mencionando pontos específicos do currículo que se alinham ou não com a vaga. Inclua contexto sobre a senioridade esperada e como o candidato se encaixa.)",
+  "forcas": [
+    "(ponto forte 1 - pelo menos 2 frases explicando como essa força beneficia o candidato para esta vaga específica)",
+    "(ponto forte 2 - contextualize com exemplos do currículo)",
+    "(ponto forte 3 - relacione com requisitos da vaga)",
+    "(ponto forte 4 - se aplicável)",
+    "(ponto forte 5 - se aplicável)"
+  ],
+  "fraquezas": [
+    "(gap 1 - explique o impacto dessa lacuna e como pode afetar a candidatura)",
+    "(gap 2 - seja específico sobre o que está faltando e por que é importante)",
+    "(gap 3 - se aplicável)",
+    "(gap 4 - se aplicável)"
+  ],
+  "palavras_chave_faltantes": ["termo 1", "termo 2", "termo 3", "etc - liste TODAS as habilidades, tecnologias ou termos importantes da vaga que não aparecem no currículo"],
+  "oportunidades_melhoria_curriculo": [
+    "(sugestão 1 - seja específico sobre O QUE adicionar e ONDE no currículo, com exemplos de redação)",
+    "(sugestão 2 - explique como reformular experiências existentes para destacar competências relevantes)",
+    "(sugestão 3 - sugira cursos, certificações ou projetos que agregariam valor)",
+    "(sugestão 4 - dicas de formatação ou estrutura se aplicável)",
+    "(sugestão 5 - outras melhorias práticas)"
+  ],
+  "vagas_sugeridas": [
+    "(título de vaga 1 mais adequado ao perfil atual do candidato)",
+    "(título de vaga 2 que aproveitaria melhor as experiências do candidato)",
+    "(título de vaga 3 alternativa interessante)",
+    "(título de vaga 4 em área correlata)",
+    "(título de vaga 5 para crescimento de carreira)"
+  ],
+  "explicacao_detalhada": "(2-3 parágrafos completos explicando a análise em profundidade. Discuta: 1) Como o background do candidato se relaciona com a posição, 2) Os principais diferenciais competitivos, 3) As áreas que precisam de desenvolvimento, 4) Uma avaliação realista das chances e 5) Recomendações finais para o candidato.)"
 }
 
 PERFIL DO CANDIDATO:
@@ -242,11 +267,12 @@ serve(async (req) => {
 
     const result = {
       score: analysis.termometro_fit,
-      summary: analysis.justificativa_resumida,
+      summary: analysis.justificativa_resumida + (analysis.explicacao_detalhada ? "\n\n" + analysis.explicacao_detalhada : ""),
       strengths: analysis.forcas,
       weaknesses: analysis.fraquezas,
       improvements: analysis.oportunidades_melhoria_curriculo,
       missingKeywords: analysis.palavras_chave_faltantes,
+      suggestedJobTitles: analysis.vagas_sugeridas,
     };
 
     return new Response(JSON.stringify(result), {
