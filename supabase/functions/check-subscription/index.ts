@@ -94,12 +94,19 @@ serve(async (req) => {
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
       stripeSubscriptionId = subscription.id;
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      periodStart = new Date(subscription.current_period_start * 1000).toISOString();
-      periodEnd = subscriptionEnd;
+      
+      // Safely parse dates with validation
+      if (subscription.current_period_end && typeof subscription.current_period_end === 'number') {
+        subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+        periodEnd = subscriptionEnd;
+      }
+      if (subscription.current_period_start && typeof subscription.current_period_start === 'number') {
+        periodStart = new Date(subscription.current_period_start * 1000).toISOString();
+      }
+      
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
       
-      productId = subscription.items.data[0].price.product as string;
+      productId = subscription.items.data[0]?.price?.product as string;
       productName = PRODUCT_NAMES[productId] || "Plano Ativo";
       analysesLimit = PRODUCT_LIMITS[productId] || 0;
       logStep("Determined subscription tier", { productId, productName, analysesLimit });
