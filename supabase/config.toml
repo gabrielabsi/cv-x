@@ -31,3 +31,9 @@ verify_jwt = false
 
 [functions.verify-payment]
 verify_jwt = true
+
+[functions.check-subscription]
+verify_jwt = true
+
+[functions.increment-usage]
+verify_jwt = true
