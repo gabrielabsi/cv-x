@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { ResumeInput } from "@/components/ResumeInput";
 import { AnalysisModal } from "@/components/AnalysisModal";
 import { UserMenu } from "@/components/UserMenu";
+import { PricingSection } from "@/components/PricingSection";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { analyzeFree, extractTextFromFile, AnalysisResult } from "@/lib/analysis";
@@ -317,6 +318,9 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {/* Pricing Section */}
+        <PricingSection />
 
       </main>
 
