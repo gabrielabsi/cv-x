@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Mail, Lock, User } from "lucide-react";
+import { Loader2, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import cvxLogo from "@/assets/cvx-logo.png";
 
@@ -19,7 +20,7 @@ const signUpSchema = loginSchema.extend({
 });
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -39,7 +40,7 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      if (isLogin) {
+      if (mode === "login") {
         const validation = loginSchema.safeParse({ email, password });
         if (!validation.success) {
           toast({
@@ -63,7 +64,7 @@ const Auth = () => {
             variant: "destructive",
           });
         }
-      } else {
+      } else if (mode === "signup") {
         const validation = signUpSchema.safeParse({ email, password, displayName });
         if (!validation.success) {
           toast({
@@ -92,6 +93,35 @@ const Auth = () => {
             description: "Você já pode começar a usar.",
           });
         }
+      } else if (mode === "reset") {
+        const emailValidation = z.string().email("Email inválido").safeParse(email);
+        if (!emailValidation.success) {
+          toast({
+            title: "Dados inválidos",
+            description: "Por favor, insira um email válido.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth`,
+        });
+
+        if (error) {
+          toast({
+            title: "Erro ao enviar email",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Email enviado!",
+            description: "Verifique sua caixa de entrada para redefinir sua senha.",
+          });
+          setMode("login");
+        }
       }
     } finally {
       setIsLoading(false);
@@ -115,17 +145,30 @@ const Auth = () => {
         </a>
 
         <div className="p-8 rounded-2xl bg-card border border-border shadow-card">
+          {mode === "reset" && (
+            <button
+              type="button"
+              onClick={() => setMode("login")}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar ao login
+            </button>
+          )}
+          
           <h1 className="text-2xl font-bold text-center text-foreground mb-2">
-            {isLogin ? "Bem-vindo de volta!" : "Crie sua conta"}
+            {mode === "login" && "Bem-vindo de volta!"}
+            {mode === "signup" && "Crie sua conta"}
+            {mode === "reset" && "Recuperar senha"}
           </h1>
           <p className="text-center text-muted-foreground mb-6">
-            {isLogin
-              ? "Entre para acessar seu histórico"
-              : "Salve suas análises na nuvem"}
+            {mode === "login" && "Entre para acessar seu histórico"}
+            {mode === "signup" && "Salve suas análises na nuvem"}
+            {mode === "reset" && "Enviaremos um link para redefinir sua senha"}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {mode === "signup" && (
               <div className="space-y-2">
                 <Label htmlFor="displayName">Nome</Label>
                 <div className="relative">
@@ -159,21 +202,35 @@ const Auth = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  disabled={isLoading}
-                />
+            {mode !== "reset" && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
-            </div>
+            )}
+
+            {mode === "login" && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setMode("reset")}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            )}
 
             <Button
               type="submit"
@@ -184,25 +241,33 @@ const Auth = () => {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {isLogin ? "Entrando..." : "Criando conta..."}
+                  {mode === "login" && "Entrando..."}
+                  {mode === "signup" && "Criando conta..."}
+                  {mode === "reset" && "Enviando..."}
                 </>
               ) : (
-                isLogin ? "Entrar" : "Criar conta"
+                <>
+                  {mode === "login" && "Entrar"}
+                  {mode === "signup" && "Criar conta"}
+                  {mode === "reset" && "Enviar link de recuperação"}
+                </>
               )}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-primary hover:underline"
-            >
-              {isLogin
-                ? "Não tem conta? Criar agora"
-                : "Já tem conta? Entrar"}
-            </button>
-          </div>
+          {mode !== "reset" && (
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setMode(mode === "login" ? "signup" : "login")}
+                className="text-sm text-primary hover:underline"
+              >
+                {mode === "login"
+                  ? "Não tem conta? Criar agora"
+                  : "Já tem conta? Entrar"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
