@@ -1,8 +1,7 @@
 import { useState, useRef } from "react";
-import { Upload, Linkedin, FileText, X, ExternalLink, User, Loader2 } from "lucide-react";
+import { Upload, Linkedin, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { supabaseAuth } from "@/integrations/supabase/authClient";
 
 interface ResumeInputProps {
   onFileChange: (file: File | null) => void;
@@ -11,11 +10,6 @@ interface ResumeInputProps {
   linkedInUrl: string;
   selectedFile: File | null;
   isLoading?: boolean;
-  linkedInProfile?: {
-    name: string;
-    email: string;
-    avatarUrl?: string;
-  } | null;
 }
 
 export function ResumeInput({ 
@@ -23,38 +17,11 @@ export function ResumeInput({
   onLinkedInChange,
   linkedInUrl, 
   selectedFile,
-  isLoading,
-  linkedInProfile
+  isLoading
 }: ResumeInputProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [inputMode, setInputMode] = useState<"file" | "linkedin">("file");
-  const [isConnectingLinkedIn, setIsConnectingLinkedIn] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleLinkedInLogin = async () => {
-    try {
-      setIsConnectingLinkedIn(true);
-      const redirectTo = `${window.location.origin}/auth/callback?returnTo=/`;
-      
-      const { error } = await supabaseAuth.auth.signInWithOAuth({
-        provider: "linkedin_oidc",
-        options: {
-          redirectTo,
-          scopes: "openid profile email",
-        },
-      });
-
-      if (error) {
-        console.error("Erro ao conectar com LinkedIn:", error);
-        alert("Não foi possível conectar com o LinkedIn.");
-        setIsConnectingLinkedIn(false);
-      }
-    } catch (err) {
-      console.error("Erro inesperado:", err);
-      alert("Erro inesperado ao tentar conectar com o LinkedIn.");
-      setIsConnectingLinkedIn(false);
-    }
-  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -195,104 +162,32 @@ export function ResumeInput({
               <div>
                 <h4 className="font-semibold text-foreground">Usar perfil do LinkedIn</h4>
                 <p className="text-sm text-muted-foreground">
-                  Conecte sua conta para importar seus dados automaticamente
+                  Exporte o PDF do seu perfil e faça upload
                 </p>
               </div>
             </div>
 
-            {linkedInProfile ? (
-              <div className="bg-[#0077B5]/10 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  {linkedInProfile.avatarUrl ? (
-                    <img 
-                      src={linkedInProfile.avatarUrl} 
-                      alt={linkedInProfile.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-[#0077B5]/30 flex items-center justify-center">
-                      <User className="w-6 h-6 text-[#0077B5]" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-semibold text-foreground">{linkedInProfile.name}</p>
-                    <p className="text-sm text-muted-foreground">{linkedInProfile.email}</p>
-                  </div>
-                  <div className="ml-auto">
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#0077B5] bg-[#0077B5]/20 px-2 py-1 rounded-full">
-                      <Linkedin className="w-3 h-3" />
-                      Conectado
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-foreground/80">
-                    ✓ Perfil do LinkedIn vinculado e pronto para análise
-                  </p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      localStorage.removeItem('cvx_linkedin_profile');
-                      window.location.reload();
-                    }}
-                    className="text-xs text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="w-3 h-3 mr-1" />
-                    Desconectar
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-3">
-                  <Button
-                    type="button"
-                    onClick={handleLinkedInLogin}
-                    disabled={isLoading || isConnectingLinkedIn}
-                    className="w-full gap-2 bg-[#0077B5] hover:bg-[#006097] text-white"
-                  >
-                    {isConnectingLinkedIn ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Conectando...
-                      </>
-                    ) : (
-                      <>
-                        <Linkedin className="w-4 h-4" />
-                        Conectar com LinkedIn
-                      </>
-                    )}
-                  </Button>
-                  
-                  <div className="flex items-center gap-2">
-                    <div className="h-px flex-1 bg-border" />
-                    <span className="text-xs text-muted-foreground">ou</span>
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={switchToFileUpload}
-                    disabled={isLoading}
-                    className="w-full gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Fazer upload do PDF do LinkedIn
-                  </Button>
-                </div>
+            <div className="flex flex-col gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={switchToFileUpload}
+                disabled={isLoading}
+                className="w-full gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Fazer upload do PDF do LinkedIn
+              </Button>
+            </div>
 
-                <div className="bg-background/50 rounded-lg p-4 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Para exportar o PDF manualmente:</p>
-                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                    <li>Acesse seu perfil no LinkedIn</li>
-                    <li>Clique em "Mais" → "Salvar como PDF"</li>
-                  </ol>
-                </div>
-              </>
-            )}
+            <div className="bg-background/50 rounded-lg p-4 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Para exportar o PDF do LinkedIn:</p>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Acesse seu perfil no LinkedIn</li>
+                <li>Clique em "Mais" → "Salvar como PDF"</li>
+                <li>Faça upload do arquivo aqui</li>
+              </ol>
+            </div>
           </div>
         </div>
       )}
