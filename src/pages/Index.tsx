@@ -395,9 +395,7 @@ const Index = () => {
                   onFileChange={setSelectedFile}
                   linkedInUrl={linkedInUrl}
                   onLinkedInChange={setLinkedInUrl}
-                  onLinkedInProfileData={setLinkedInProfileData}
                   isLoading={isLoading}
-                  linkedInProfile={linkedInProfile}
                 />
               </div>
 
