@@ -36,6 +36,7 @@ interface SubscriptionInfo {
 
 const Index = () => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
+  const [linkedInProfileData, setLinkedInProfileData] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -97,10 +98,10 @@ const Index = () => {
       return;
     }
 
-    if (!selectedFile && !linkedInUrl.trim()) {
+    if (!selectedFile && !linkedInUrl.trim() && !linkedInProfileData.trim()) {
       toast({
         title: "Currículo obrigatório",
-        description: "Envie um arquivo PDF/DOCX ou insira a URL do LinkedIn.",
+        description: "Envie um arquivo PDF/DOCX ou conecte seu LinkedIn.",
         variant: "destructive",
       });
       return;
@@ -109,7 +110,7 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      let resumeText = "";
+      let resumeText = linkedInProfileData || "";
       
       if (selectedFile) {
         resumeText = await extractTextFromFile(selectedFile);
@@ -368,6 +369,7 @@ const Index = () => {
                   onFileChange={setSelectedFile}
                   linkedInUrl={linkedInUrl}
                   onLinkedInChange={setLinkedInUrl}
+                  onLinkedInProfileData={setLinkedInProfileData}
                   isLoading={isLoading}
                 />
               </div>
