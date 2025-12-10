@@ -34,6 +34,12 @@ interface SubscriptionInfo {
   analyses_limit: number;
 }
 
+interface LinkedInProfile {
+  name: string;
+  email: string;
+  avatarUrl?: string;
+}
+
 const Index = () => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
   const [linkedInProfileData, setLinkedInProfileData] = useState("");
@@ -45,9 +51,29 @@ const Index = () => {
   const [isPremiumResult, setIsPremiumResult] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
+  const [linkedInProfile, setLinkedInProfile] = useState<LinkedInProfile | null>(null);
   const { toast } = useToast();
   const { user, session } = useAuth();
   const navigate = useNavigate();
+
+  // Check for LinkedIn profile from OAuth
+  useEffect(() => {
+    const storedProfile = localStorage.getItem('cvx_linkedin_profile');
+    if (storedProfile) {
+      try {
+        const profile = JSON.parse(storedProfile);
+        setLinkedInProfile(profile);
+        // Set profile data for analysis
+        setLinkedInProfileData(`Nome: ${profile.name}\nEmail: ${profile.email}`);
+        toast({
+          title: "LinkedIn conectado!",
+          description: `Perfil de ${profile.name} vinculado com sucesso.`,
+        });
+      } catch (e) {
+        console.error('Error parsing LinkedIn profile:', e);
+      }
+    }
+  }, []);
 
   // Check subscription status when user is logged in
   useEffect(() => {
@@ -98,7 +124,7 @@ const Index = () => {
       return;
     }
 
-    if (!selectedFile && !linkedInUrl.trim() && !linkedInProfileData.trim()) {
+    if (!selectedFile && !linkedInUrl.trim() && !linkedInProfileData.trim() && !linkedInProfile) {
       toast({
         title: "Currículo obrigatório",
         description: "Envie um arquivo PDF/DOCX ou conecte seu LinkedIn.",
@@ -371,6 +397,7 @@ const Index = () => {
                   onLinkedInChange={setLinkedInUrl}
                   onLinkedInProfileData={setLinkedInProfileData}
                   isLoading={isLoading}
+                  linkedInProfile={linkedInProfile}
                 />
               </div>
 
