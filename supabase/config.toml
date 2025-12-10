@@ -37,3 +37,6 @@ verify_jwt = true
 
 [functions.increment-usage]
 verify_jwt = true
+
+[functions.fetch-linkedin-profile]
+verify_jwt = true

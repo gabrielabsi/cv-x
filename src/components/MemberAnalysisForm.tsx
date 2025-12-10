@@ -25,6 +25,7 @@ export const MemberAnalysisForm = ({
   onUsageIncremented,
 }: MemberAnalysisFormProps) => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
+  const [linkedInProfileData, setLinkedInProfileData] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -41,10 +42,10 @@ export const MemberAnalysisForm = ({
       return;
     }
 
-    if (!selectedFile && !linkedInUrl.trim()) {
+    if (!selectedFile && !linkedInUrl.trim() && !linkedInProfileData.trim()) {
       toast({
         title: "Currículo obrigatório",
-        description: "Envie um arquivo PDF/DOCX ou insira a URL do LinkedIn.",
+        description: "Envie um arquivo PDF/DOCX ou conecte seu LinkedIn.",
         variant: "destructive",
       });
       return;
@@ -62,7 +63,7 @@ export const MemberAnalysisForm = ({
     setIsLoading(true);
 
     try {
-      let resumeText = "";
+      let resumeText = linkedInProfileData || "";
       if (selectedFile) {
         resumeText = await extractTextFromFile(selectedFile);
       }
@@ -148,6 +149,7 @@ export const MemberAnalysisForm = ({
       // Clear form after successful analysis
       setJobDescription("");
       setLinkedInUrl("");
+      setLinkedInProfileData("");
       setSelectedFile(null);
     } catch (error) {
       toast({
@@ -176,6 +178,7 @@ export const MemberAnalysisForm = ({
               onFileChange={setSelectedFile}
               linkedInUrl={linkedInUrl}
               onLinkedInChange={setLinkedInUrl}
+              onLinkedInProfileData={setLinkedInProfileData}
               isLoading={isLoading}
             />
           </div>
