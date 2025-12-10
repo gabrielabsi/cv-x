@@ -225,9 +225,24 @@ export function ResumeInput({
                     </span>
                   </div>
                 </div>
-                <p className="text-sm text-foreground/80">
-                  ✓ Perfil do LinkedIn vinculado e pronto para análise
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-foreground/80">
+                    ✓ Perfil do LinkedIn vinculado e pronto para análise
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      localStorage.removeItem('cvx_linkedin_profile');
+                      window.location.reload();
+                    }}
+                    className="text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Desconectar
+                  </Button>
+                </div>
               </div>
             ) : (
               <>
