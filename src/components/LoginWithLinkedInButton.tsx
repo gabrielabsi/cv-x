@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { supabaseAuth } from "@/integrations/supabase/authClient";
+import { Loader2, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function LoginWithLinkedInButton() {
@@ -15,7 +15,7 @@ export function LoginWithLinkedInButton() {
           ? `${window.location.origin}/auth/callback`
           : undefined;
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabaseAuth.auth.signInWithOAuth({
         provider: "linkedin_oidc",
         options: {
           redirectTo,
