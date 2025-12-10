@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Mail, Lock, User, ArrowLeft } from "lucide-react";
+import { LoginWithLinkedInButton } from "@/components/LoginWithLinkedInButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -254,6 +255,18 @@ const Auth = () => {
               )}
             </Button>
           </form>
+
+          {mode !== "reset" && (
+            <>
+              <div className="flex items-center gap-2 my-4">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">ou</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <LoginWithLinkedInButton />
+            </>
+          )}
 
           {mode !== "reset" && (
             <div className="mt-6 text-center">
