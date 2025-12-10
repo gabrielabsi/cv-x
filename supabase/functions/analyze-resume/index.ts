@@ -51,7 +51,15 @@ async function callOpenAI(systemPrompt: string, userPrompt: string, jsonMode = t
 }
 
 async function summarizeResume(resumeText: string) {
-  const systemPrompt = `Você é um especialista em análise de currículos. Extraia as informações principais do currículo/perfil fornecido e retorne em JSON estruturado. Se receber apenas uma URL de LinkedIn, faça uma análise baseada em informações típicas de perfis profissionais.`;
+  const systemPrompt = `
+Você é um especialista em análise de currículos.
+
+REGRAS IMPORTANTES:
+- Baseie-se APENAS no texto recebido.
+- Se o conteúdo parecer ser só um link ou informação insuficiente, explique isso claramente e oriente o usuário a fornecer o texto do currículo ou do perfil.
+- NÃO invente detalhes do perfil.
+- Se faltar informação, use campos nulos ou listas vazias no JSON.
+`;
   
   const userPrompt = `Analise o conteúdo do currículo/perfil abaixo e extraia as informações em JSON. Se algumas informações não estiverem disponíveis, faça inferências razoáveis baseadas no contexto:
 
