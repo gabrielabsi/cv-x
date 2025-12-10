@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Linkedin } from 'lucide-react';
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function LoginWithLinkedInButton() {
   const [loading, setLoading] = useState(false);
@@ -11,27 +11,29 @@ export function LoginWithLinkedInButton() {
       setLoading(true);
 
       const redirectTo =
-        typeof window !== 'undefined'
+        typeof window !== "undefined"
           ? `${window.location.origin}/auth/callback`
           : undefined;
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'linkedin_oidc',
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "linkedin_oidc",
         options: {
           redirectTo,
-          scopes: 'openid profile email',
+          scopes: "openid profile email",
         },
       });
 
       if (error) {
-        console.error('Erro ao iniciar login com LinkedIn:', error);
-        alert('Não foi possível iniciar o login com o LinkedIn.');
+        console.error("Erro ao iniciar login com LinkedIn:", error);
+        alert("Não foi possível iniciar o login com o LinkedIn.");
         setLoading(false);
         return;
       }
+
+      console.log("Redirecionando para LinkedIn OAuth…", data);
     } catch (err) {
-      console.error(err);
-      alert('Erro inesperado ao tentar autenticar com o LinkedIn.');
+      console.error("Erro inesperado ao iniciar login com LinkedIn:", err);
+      alert("Erro inesperado ao tentar autenticar com o LinkedIn.");
       setLoading(false);
     }
   };
@@ -39,13 +41,21 @@ export function LoginWithLinkedInButton() {
   return (
     <Button
       type="button"
-      onClick={handleLogin}
-      disabled={loading}
       variant="outline"
       className="w-full flex items-center justify-center gap-2"
+      onClick={handleLogin}
+      disabled={loading}
     >
-      <Linkedin className="h-4 w-4" />
-      {loading ? 'Redirecionando…' : 'Entrar com LinkedIn'}
+      {loading ? (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Conectando ao LinkedIn…
+        </>
+      ) : (
+        <>
+          Entrar com LinkedIn
+        </>
+      )}
     </Button>
   );
 }
