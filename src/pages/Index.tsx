@@ -455,14 +455,14 @@ const Index = () => {
             {canUpgrade && (
               <UpgradeSection currentProductId={subscription?.product_id || null} />
             )}
-            
-            {/* Show mentorship section for all subscribed users */}
-            <MentorshipSection />
           </>
         ) : (
           /* Show pricing section for non-subscribed users */
           <PricingSection />
         )}
+        
+        {/* Mentorship section for all users */}
+        <MentorshipSection />
 
         {/* Contact Section */}
         <div className="text-center mt-16 animate-fade-up">
