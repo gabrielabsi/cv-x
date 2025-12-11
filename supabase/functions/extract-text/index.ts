@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import pako from "https://esm.sh/pako@2.1.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -120,95 +121,178 @@ function cleanText(text: string): string {
 }
 
 async function extractPdfText(bytes: Uint8Array): Promise<string> {
-  // Use improved text extraction for PDFs
-  return fallbackPdfExtraction(bytes);
-}
-
-function fallbackPdfExtraction(bytes: Uint8Array): string {
   const textDecoder = new TextDecoder("utf-8", { fatal: false });
   const rawText = textDecoder.decode(bytes);
   
-  let text = "";
   const extractedParts: string[] = [];
   
-  // Method 1: Extract text from Tj and TJ operators (most common PDF text commands)
-  const tjMatches = rawText.match(/\(([^)]{2,})\)\s*Tj/g);
-  if (tjMatches) {
-    for (const match of tjMatches) {
-      const content = match.replace(/\)\s*Tj$/, "").replace(/^\(/, "");
-      if (content.length > 1 && /[a-zA-ZáéíóúÁÉÍÓÚ]/.test(content)) {
-        extractedParts.push(content);
-      }
-    }
-  }
-  
-  // Method 2: Extract text from parentheses (PDF string literals)
-  const parenMatches = rawText.match(/\(([^)]+)\)/g);
-  if (parenMatches) {
-    for (const match of parenMatches) {
-      const content = match.slice(1, -1);
-      // Filter out binary/encoded content and keep readable text
-      if (content.length > 2 && 
-          content.length < 500 && 
-          /[a-zA-ZáéíóúâêîôûãõàèìòùçÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ]{2,}/.test(content) &&
-          !/^[\x00-\x1f]+$/.test(content)) {
-        // Decode common PDF escape sequences
-        const decoded = content
-          .replace(/\\n/g, "\n")
-          .replace(/\\r/g, "")
-          .replace(/\\t/g, " ")
-          .replace(/\\\(/g, "(")
-          .replace(/\\\)/g, ")")
-          .replace(/\\\\/g, "\\");
-        extractedParts.push(decoded);
-      }
-    }
-  }
-  
-  // Method 3: Look for text in BT...ET blocks (text objects)
-  const btMatches = rawText.match(/BT[\s\S]{10,5000}?ET/g);
-  if (btMatches) {
-    for (const block of btMatches) {
-      // Extract strings from within the block
-      const blockStrings = block.match(/\(([^)]+)\)/g);
-      if (blockStrings) {
-        for (const str of blockStrings) {
-          const content = str.slice(1, -1);
-          if (content.length > 1 && /[a-zA-Z]/.test(content)) {
-            extractedParts.push(content);
-          }
+  // Method 1: Extract and decompress FlateDecode streams (common in modern PDFs)
+  try {
+    const streamRegex = /stream\s*([\s\S]*?)\s*endstream/g;
+    let match;
+    
+    while ((match = streamRegex.exec(rawText)) !== null) {
+      const streamContent = match[1];
+      
+      // Try to find the raw bytes of this stream in the original data
+      const streamStart = match.index + match[0].indexOf(streamContent);
+      const streamBytes = bytes.slice(streamStart, streamStart + streamContent.length);
+      
+      // Try to decompress with pako (zlib/deflate)
+      try {
+        const decompressed = pako.inflate(streamBytes);
+        const decompressedText = new TextDecoder("utf-8", { fatal: false }).decode(decompressed);
+        
+        // Extract text from the decompressed content
+        const textFromStream = extractTextFromPdfContent(decompressedText);
+        if (textFromStream.length > 10) {
+          extractedParts.push(textFromStream);
+        }
+      } catch (e) {
+        // Stream might not be compressed or use different compression
+        const textFromStream = extractTextFromPdfContent(streamContent);
+        if (textFromStream.length > 10) {
+          extractedParts.push(textFromStream);
         }
       }
     }
+  } catch (e) {
+    console.log("Stream extraction failed:", e);
   }
   
-  // Combine and deduplicate
-  const seen = new Set<string>();
-  const uniqueParts: string[] = [];
-  for (const part of extractedParts) {
-    const normalized = part.trim();
-    if (normalized.length > 0 && !seen.has(normalized)) {
-      seen.add(normalized);
-      uniqueParts.push(normalized);
+  // Method 2: Direct text extraction from parentheses (uncompressed PDFs)
+  const parenText = extractTextFromParentheses(rawText);
+  if (parenText.length > 50) {
+    extractedParts.push(parenText);
+  }
+  
+  // Method 3: Look for BT/ET text blocks
+  const btText = extractTextFromBTBlocks(rawText);
+  if (btText.length > 50) {
+    extractedParts.push(btText);
+  }
+  
+  // Method 4: Extract URLs and emails (always useful from LinkedIn PDFs)
+  const urls = rawText.match(/https?:\/\/[^\s<>"{}|\\^`\[\]]+/g) || [];
+  const emails = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+  
+  // Combine all extracted text
+  let combinedText = extractedParts.join("\n\n");
+  
+  // If we have URLs/emails but little text, add them
+  if (combinedText.length < 200) {
+    if (emails.length > 0) {
+      combinedText = `Email: ${emails[0]}\n` + combinedText;
     }
+    urls.forEach(url => {
+      if (url.includes("linkedin.com")) {
+        combinedText = `LinkedIn: ${url}\n` + combinedText;
+      }
+    });
   }
   
-  text = uniqueParts.join(" ");
-  
-  // Clean up any remaining PDF artifacts
-  text = text
-    .replace(/\\[0-9]{3}/g, "") // Remove octal escapes
-    .replace(/[^\w\s@.,-áéíóúâêîôûãõàèìòùçÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ:;()\/&+'"!?#$%\n]/gi, " ")
+  // Clean the result
+  combinedText = combinedText
+    .replace(/[^\w\s@.,-áéíóúâêîôûãõàèìòùçÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ:;()\/&+'"!?#$%@\n]/gi, " ")
     .replace(/\s+/g, " ")
+    .replace(/\n\s*\n/g, "\n")
     .trim();
   
-  console.log(`Fallback PDF extraction: ${text.length} characters`);
-  return text.slice(0, 30000);
+  console.log(`PDF extraction: ${combinedText.length} characters`);
+  
+  // If still too short, the PDF likely needs OCR or has only images
+  if (combinedText.length < 100) {
+    return "Este PDF parece conter apenas imagens ou texto não extraível. Por favor, cole o texto do seu currículo diretamente ou exporte seu perfil do LinkedIn como texto.";
+  }
+  
+  return combinedText.slice(0, 30000);
+}
+
+function extractTextFromPdfContent(content: string): string {
+  const parts: string[] = [];
+  
+  // Extract text from Tj operators
+  const tjMatches = content.match(/\(([^)]*)\)\s*Tj/g);
+  if (tjMatches) {
+    tjMatches.forEach(match => {
+      const text = match.replace(/\)\s*Tj$/, "").replace(/^\(/, "");
+      if (text.length > 1 && /[a-zA-ZáéíóúÁÉÍÓÚ]/.test(text)) {
+        parts.push(decodePdfString(text));
+      }
+    });
+  }
+  
+  // Extract text from TJ arrays
+  const tjArrayMatches = content.match(/\[((?:[^[\]]*|\[(?:[^[\]]*|\[[^\]]*\])*\])*)\]\s*TJ/gi);
+  if (tjArrayMatches) {
+    tjArrayMatches.forEach(match => {
+      const stringMatches = match.match(/\(([^)]*)\)/g);
+      if (stringMatches) {
+        stringMatches.forEach(str => {
+          const text = str.slice(1, -1);
+          if (text.length > 0 && /[a-zA-ZáéíóúÁÉÍÓÚ]/.test(text)) {
+            parts.push(decodePdfString(text));
+          }
+        });
+      }
+    });
+  }
+  
+  return parts.join(" ");
+}
+
+function decodePdfString(str: string): string {
+  return str
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "")
+    .replace(/\\t/g, " ")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
+}
+
+function extractTextFromParentheses(rawText: string): string {
+  const parts: string[] = [];
+  const matches = rawText.match(/\(([^)]{3,500})\)/g);
+  
+  if (matches) {
+    matches.forEach(match => {
+      const content = match.slice(1, -1);
+      // Filter readable text only
+      if (/[a-zA-ZáéíóúâêîôûãõàèìòùçÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ]{3,}/.test(content) &&
+          !/^[\x00-\x1f\x80-\xff]+$/.test(content)) {
+        const decoded = decodePdfString(content);
+        // Only keep if mostly readable characters
+        const readableChars = decoded.replace(/[^a-zA-Z0-9\s]/g, "").length;
+        if (readableChars > decoded.length * 0.3) {
+          parts.push(decoded);
+        }
+      }
+    });
+  }
+  
+  return parts.join(" ");
+}
+
+function extractTextFromBTBlocks(rawText: string): string {
+  const parts: string[] = [];
+  const btMatches = rawText.match(/BT[\s\S]{10,5000}?ET/g);
+  
+  if (btMatches) {
+    btMatches.forEach(block => {
+      const text = extractTextFromPdfContent(block);
+      if (text.length > 5) {
+        parts.push(text);
+      }
+    });
+  }
+  
+  return parts.join(" ");
 }
 
 async function extractDocxText(bytes: Uint8Array): Promise<string> {
   try {
-    // Dynamic import of JSZip via esm.sh
     const JSZip = await import("https://esm.sh/jszip@3.10.1?target=deno");
     
     const zip = await JSZip.default.loadAsync(bytes);
@@ -219,12 +303,11 @@ async function extractDocxText(bytes: Uint8Array): Promise<string> {
       return fallbackDocxExtraction(bytes);
     }
     
-    // Extract text from XML - handle both <w:t> and <w:t xml:space="preserve">
+    // Extract text from XML
     const textMatches = documentXml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g);
     if (textMatches) {
       const text = textMatches
         .map((m) => {
-          // Remove XML tags and decode entities
           return m
             .replace(/<[^>]+>/g, "")
             .replace(/&amp;/g, "&")
@@ -249,7 +332,6 @@ function fallbackDocxExtraction(bytes: Uint8Array): string {
   const textDecoder = new TextDecoder("utf-8", { fatal: false });
   const rawText = textDecoder.decode(bytes);
   
-  // Extract text from XML tags
   const textMatches = rawText.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
   if (textMatches) {
     const text = textMatches
