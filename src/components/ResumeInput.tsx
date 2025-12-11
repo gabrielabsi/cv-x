@@ -68,7 +68,10 @@ export function ResumeInput({
           type="button"
           variant={inputMode === "file" ? "default" : "outline"}
           size="sm"
-          onClick={() => setInputMode("file")}
+          onClick={() => {
+            setInputMode("file");
+            fileInputRef.current?.click();
+          }}
           disabled={isLoading}
           className="gap-2"
         >
