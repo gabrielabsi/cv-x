@@ -1,18 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
-import pako from "https://esm.sh/pako@2.1.0";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+
+// Helper function to convert Uint8Array to base64
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  return base64Encode(bytes.buffer as ArrayBuffer);
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Validation schema for JSON input
 const jsonInputSchema = z.object({
   text: z.string().max(100000, "Text too long").optional().default(""),
 });
 
-// Constants for file validation
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXTENSIONS = [".pdf", ".docx"];
 
@@ -23,7 +26,6 @@ serve(async (req) => {
 
   try {
     const contentType = req.headers.get("content-type") || "";
-    
     let text = "";
     
     if (contentType.includes("multipart/form-data")) {
@@ -37,7 +39,6 @@ serve(async (req) => {
         );
       }
 
-      // Validate file size
       if (file.size > MAX_FILE_SIZE) {
         return new Response(
           JSON.stringify({ error: "File too large. Maximum size is 10MB" }),
@@ -47,7 +48,6 @@ serve(async (req) => {
 
       const fileName = file.name.toLowerCase();
       
-      // Validate file extension
       if (!ALLOWED_EXTENSIONS.some(ext => fileName.endsWith(ext))) {
         return new Response(
           JSON.stringify({ error: "Invalid file type. Only PDF and DOCX files are allowed" }),
@@ -61,12 +61,12 @@ serve(async (req) => {
       console.log(`Processing file: ${fileName}, size: ${file.size} bytes`);
       
       if (fileName.endsWith(".pdf")) {
-        text = await extractPdfText(bytes);
+        // Use OpenAI to extract text from PDF
+        text = await extractPdfTextWithOpenAI(bytes, fileName);
       } else if (fileName.endsWith(".docx")) {
         text = await extractDocxText(bytes);
       }
 
-      // Clean up and limit text
       text = cleanText(text);
       
       if (text.length > 50000) {
@@ -76,11 +76,9 @@ serve(async (req) => {
       console.log(`Extracted ${text.length} characters from file`);
 
       if (text.length < 50) {
-        console.log("Extracted text too short, returning fallback message");
         text = "Não foi possível extrair texto suficiente do arquivo. Por favor, cole o texto do currículo diretamente.";
       }
     } else {
-      // Validate JSON input
       const rawBody = await req.json();
       const validationResult = jsonInputSchema.safeParse(rawBody);
       
@@ -120,175 +118,315 @@ function cleanText(text: string): string {
     .trim();
 }
 
-async function extractPdfText(bytes: Uint8Array): Promise<string> {
+async function extractPdfTextWithOpenAI(bytes: Uint8Array, fileName: string): Promise<string> {
+  const openAIApiKey = Deno.env.get("Open_AI");
+  
+  if (!openAIApiKey) {
+    console.error("OpenAI API key not found");
+    return fallbackPdfExtraction(bytes);
+  }
+
+  try {
+    // Convert PDF to base64
+    const base64Pdf = uint8ArrayToBase64(bytes);
+    
+    console.log("Sending PDF to OpenAI for text extraction...");
+    
+    // Use GPT-4o to extract text from the PDF
+    // We'll send it as a data URL and ask the model to extract all text
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openAIApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `Você é um especialista em extração de texto de documentos. 
+Sua tarefa é extrair TODO o texto visível do documento PDF fornecido.
+Retorne APENAS o texto extraído, sem formatação adicional, comentários ou explicações.
+Mantenha a estrutura do documento (parágrafos, listas, seções).
+Se o documento for um currículo, extraia todas as informações: nome, contato, experiência, educação, habilidades, etc.`
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Extraia todo o texto deste documento PDF (arquivo: ${fileName}). Retorne apenas o texto extraído.`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:application/pdf;base64,${base64Pdf}`,
+                  detail: "high"
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 4096,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenAI API error:", response.status, errorText);
+      
+      // If the model doesn't support PDF directly, try alternative approach
+      if (response.status === 400) {
+        console.log("Trying alternative extraction with file upload...");
+        return await extractPdfWithAssistant(bytes, openAIApiKey);
+      }
+      
+      return fallbackPdfExtraction(bytes);
+    }
+
+    const data = await response.json();
+    const extractedText = data.choices?.[0]?.message?.content || "";
+    
+    console.log(`OpenAI extracted ${extractedText.length} characters`);
+    
+    if (extractedText.length < 50) {
+      console.log("OpenAI extraction returned too little text, trying fallback");
+      return fallbackPdfExtraction(bytes);
+    }
+    
+    return extractedText;
+  } catch (error) {
+    console.error("OpenAI extraction error:", error);
+    return fallbackPdfExtraction(bytes);
+  }
+}
+
+async function extractPdfWithAssistant(bytes: Uint8Array, apiKey: string): Promise<string> {
+  try {
+    // First, upload the file to OpenAI
+    const formData = new FormData();
+    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
+    formData.append("file", blob, "resume.pdf");
+    formData.append("purpose", "assistants");
+
+    console.log("Uploading PDF to OpenAI Files API...");
+    
+    const uploadResponse = await fetch("https://api.openai.com/v1/files", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error("File upload error:", errorText);
+      return fallbackPdfExtraction(bytes);
+    }
+
+    const uploadData = await uploadResponse.json();
+    const fileId = uploadData.id;
+    console.log(`File uploaded with ID: ${fileId}`);
+
+    // Create an assistant with file search capability
+    const assistantResponse = await fetch("https://api.openai.com/v1/assistants", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "OpenAI-Beta": "assistants=v2",
+      },
+      body: JSON.stringify({
+        name: "PDF Text Extractor",
+        instructions: "Você extrai texto de documentos PDF. Retorne apenas o texto extraído sem formatação adicional.",
+        model: "gpt-4o-mini",
+        tools: [{ type: "file_search" }],
+      }),
+    });
+
+    if (!assistantResponse.ok) {
+      console.error("Assistant creation error");
+      // Clean up: delete the file
+      await deleteOpenAIFile(fileId, apiKey);
+      return fallbackPdfExtraction(bytes);
+    }
+
+    const assistant = await assistantResponse.json();
+    const assistantId = assistant.id;
+
+    // Create a thread with the file
+    const threadResponse = await fetch("https://api.openai.com/v1/threads", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "OpenAI-Beta": "assistants=v2",
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "user",
+            content: "Extraia todo o texto deste documento PDF. Retorne apenas o texto extraído, mantendo a estrutura original.",
+            attachments: [
+              {
+                file_id: fileId,
+                tools: [{ type: "file_search" }],
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!threadResponse.ok) {
+      console.error("Thread creation error");
+      await deleteOpenAIFile(fileId, apiKey);
+      await deleteOpenAIAssistant(assistantId, apiKey);
+      return fallbackPdfExtraction(bytes);
+    }
+
+    const thread = await threadResponse.json();
+    const threadId = thread.id;
+
+    // Run the assistant
+    const runResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "OpenAI-Beta": "assistants=v2",
+      },
+      body: JSON.stringify({
+        assistant_id: assistantId,
+      }),
+    });
+
+    if (!runResponse.ok) {
+      console.error("Run creation error");
+      await deleteOpenAIFile(fileId, apiKey);
+      await deleteOpenAIAssistant(assistantId, apiKey);
+      return fallbackPdfExtraction(bytes);
+    }
+
+    const run = await runResponse.json();
+    const runId = run.id;
+
+    // Poll for completion
+    let attempts = 0;
+    let runStatus = run.status;
+    
+    while (runStatus !== "completed" && runStatus !== "failed" && attempts < 30) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const statusResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs/${runId}`, {
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "OpenAI-Beta": "assistants=v2",
+        },
+      });
+      
+      const statusData = await statusResponse.json();
+      runStatus = statusData.status;
+      attempts++;
+    }
+
+    if (runStatus !== "completed") {
+      console.error("Run did not complete:", runStatus);
+      await deleteOpenAIFile(fileId, apiKey);
+      await deleteOpenAIAssistant(assistantId, apiKey);
+      return fallbackPdfExtraction(bytes);
+    }
+
+    // Get messages
+    const messagesResponse = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "OpenAI-Beta": "assistants=v2",
+      },
+    });
+
+    const messagesData = await messagesResponse.json();
+    const assistantMessage = messagesData.data?.find((m: any) => m.role === "assistant");
+    const extractedText = assistantMessage?.content?.[0]?.text?.value || "";
+
+    // Clean up
+    await deleteOpenAIFile(fileId, apiKey);
+    await deleteOpenAIAssistant(assistantId, apiKey);
+
+    console.log(`Assistant extracted ${extractedText.length} characters`);
+    return extractedText;
+  } catch (error) {
+    console.error("Assistant extraction error:", error);
+    return fallbackPdfExtraction(bytes);
+  }
+}
+
+async function deleteOpenAIFile(fileId: string, apiKey: string) {
+  try {
+    await fetch(`https://api.openai.com/v1/files/${fileId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${apiKey}` },
+    });
+  } catch (e) {
+    console.error("Error deleting file:", e);
+  }
+}
+
+async function deleteOpenAIAssistant(assistantId: string, apiKey: string) {
+  try {
+    await fetch(`https://api.openai.com/v1/assistants/${assistantId}`, {
+      method: "DELETE",
+      headers: { 
+        "Authorization": `Bearer ${apiKey}`,
+        "OpenAI-Beta": "assistants=v2",
+      },
+    });
+  } catch (e) {
+    console.error("Error deleting assistant:", e);
+  }
+}
+
+function fallbackPdfExtraction(bytes: Uint8Array): string {
   const textDecoder = new TextDecoder("utf-8", { fatal: false });
   const rawText = textDecoder.decode(bytes);
   
-  const extractedParts: string[] = [];
+  const parts: string[] = [];
   
-  // Method 1: Extract and decompress FlateDecode streams (common in modern PDFs)
-  try {
-    const streamRegex = /stream\s*([\s\S]*?)\s*endstream/g;
-    let match;
-    
-    while ((match = streamRegex.exec(rawText)) !== null) {
-      const streamContent = match[1];
-      
-      // Try to find the raw bytes of this stream in the original data
-      const streamStart = match.index + match[0].indexOf(streamContent);
-      const streamBytes = bytes.slice(streamStart, streamStart + streamContent.length);
-      
-      // Try to decompress with pako (zlib/deflate)
-      try {
-        const decompressed = pako.inflate(streamBytes);
-        const decompressedText = new TextDecoder("utf-8", { fatal: false }).decode(decompressed);
-        
-        // Extract text from the decompressed content
-        const textFromStream = extractTextFromPdfContent(decompressedText);
-        if (textFromStream.length > 10) {
-          extractedParts.push(textFromStream);
-        }
-      } catch (e) {
-        // Stream might not be compressed or use different compression
-        const textFromStream = extractTextFromPdfContent(streamContent);
-        if (textFromStream.length > 10) {
-          extractedParts.push(textFromStream);
-        }
-      }
-    }
-  } catch (e) {
-    console.log("Stream extraction failed:", e);
-  }
-  
-  // Method 2: Direct text extraction from parentheses (uncompressed PDFs)
-  const parenText = extractTextFromParentheses(rawText);
-  if (parenText.length > 50) {
-    extractedParts.push(parenText);
-  }
-  
-  // Method 3: Look for BT/ET text blocks
-  const btText = extractTextFromBTBlocks(rawText);
-  if (btText.length > 50) {
-    extractedParts.push(btText);
-  }
-  
-  // Method 4: Extract URLs and emails (always useful from LinkedIn PDFs)
+  // Extract URLs and emails
   const urls = rawText.match(/https?:\/\/[^\s<>"{}|\\^`\[\]]+/g) || [];
   const emails = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
   
-  // Combine all extracted text
-  let combinedText = extractedParts.join("\n\n");
+  if (emails.length > 0) {
+    parts.push(`Email: ${emails[0]}`);
+  }
   
-  // If we have URLs/emails but little text, add them
-  if (combinedText.length < 200) {
-    if (emails.length > 0) {
-      combinedText = `Email: ${emails[0]}\n` + combinedText;
+  urls.forEach(url => {
+    if (url.includes("linkedin.com")) {
+      parts.push(`LinkedIn: ${url}`);
+    } else if (!url.includes("adobe") && !url.includes("w3.org")) {
+      parts.push(`Website: ${url}`);
     }
-    urls.forEach(url => {
-      if (url.includes("linkedin.com")) {
-        combinedText = `LinkedIn: ${url}\n` + combinedText;
-      }
-    });
-  }
+  });
   
-  // Clean the result
-  combinedText = combinedText
-    .replace(/[^\w\s@.,-áéíóúâêîôûãõàèìòùçÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ:;()\/&+'"!?#$%@\n]/gi, " ")
-    .replace(/\s+/g, " ")
-    .replace(/\n\s*\n/g, "\n")
-    .trim();
-  
-  console.log(`PDF extraction: ${combinedText.length} characters`);
-  
-  // If still too short, the PDF likely needs OCR or has only images
-  if (combinedText.length < 100) {
-    return "Este PDF parece conter apenas imagens ou texto não extraível. Por favor, cole o texto do seu currículo diretamente ou exporte seu perfil do LinkedIn como texto.";
-  }
-  
-  return combinedText.slice(0, 30000);
-}
-
-function extractTextFromPdfContent(content: string): string {
-  const parts: string[] = [];
-  
-  // Extract text from Tj operators
-  const tjMatches = content.match(/\(([^)]*)\)\s*Tj/g);
-  if (tjMatches) {
-    tjMatches.forEach(match => {
-      const text = match.replace(/\)\s*Tj$/, "").replace(/^\(/, "");
-      if (text.length > 1 && /[a-zA-ZáéíóúÁÉÍÓÚ]/.test(text)) {
-        parts.push(decodePdfString(text));
-      }
-    });
-  }
-  
-  // Extract text from TJ arrays
-  const tjArrayMatches = content.match(/\[((?:[^[\]]*|\[(?:[^[\]]*|\[[^\]]*\])*\])*)\]\s*TJ/gi);
-  if (tjArrayMatches) {
-    tjArrayMatches.forEach(match => {
-      const stringMatches = match.match(/\(([^)]*)\)/g);
-      if (stringMatches) {
-        stringMatches.forEach(str => {
-          const text = str.slice(1, -1);
-          if (text.length > 0 && /[a-zA-ZáéíóúÁÉÍÓÚ]/.test(text)) {
-            parts.push(decodePdfString(text));
-          }
-        });
-      }
-    });
-  }
-  
-  return parts.join(" ");
-}
-
-function decodePdfString(str: string): string {
-  return str
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "")
-    .replace(/\\t/g, " ")
-    .replace(/\\\(/g, "(")
-    .replace(/\\\)/g, ")")
-    .replace(/\\\\/g, "\\")
-    .replace(/\\([0-7]{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
-}
-
-function extractTextFromParentheses(rawText: string): string {
-  const parts: string[] = [];
-  const matches = rawText.match(/\(([^)]{3,500})\)/g);
-  
-  if (matches) {
-    matches.forEach(match => {
+  // Try to extract readable text from parentheses
+  const parenMatches = rawText.match(/\(([^)]{3,200})\)/g);
+  if (parenMatches) {
+    parenMatches.forEach(match => {
       const content = match.slice(1, -1);
-      // Filter readable text only
-      if (/[a-zA-ZáéíóúâêîôûãõàèìòùçÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ]{3,}/.test(content) &&
-          !/^[\x00-\x1f\x80-\xff]+$/.test(content)) {
-        const decoded = decodePdfString(content);
-        // Only keep if mostly readable characters
-        const readableChars = decoded.replace(/[^a-zA-Z0-9\s]/g, "").length;
-        if (readableChars > decoded.length * 0.3) {
-          parts.push(decoded);
+      if (/[a-zA-ZáéíóúâêîôûãõàèìòùçÁÉÍÓÚÂÊÎÔÛÃÕÀÈÌÒÙÇ]{4,}/.test(content)) {
+        const readableChars = content.replace(/[^a-zA-Z0-9\s]/g, "").length;
+        if (readableChars > content.length * 0.5) {
+          parts.push(content);
         }
       }
     });
   }
   
-  return parts.join(" ");
-}
-
-function extractTextFromBTBlocks(rawText: string): string {
-  const parts: string[] = [];
-  const btMatches = rawText.match(/BT[\s\S]{10,5000}?ET/g);
-  
-  if (btMatches) {
-    btMatches.forEach(block => {
-      const text = extractTextFromPdfContent(block);
-      if (text.length > 5) {
-        parts.push(text);
-      }
-    });
-  }
-  
-  return parts.join(" ");
+  const text = parts.join("\n").slice(0, 5000);
+  console.log(`Fallback extraction: ${text.length} characters`);
+  return text;
 }
 
 async function extractDocxText(bytes: Uint8Array): Promise<string> {
@@ -299,11 +437,9 @@ async function extractDocxText(bytes: Uint8Array): Promise<string> {
     const documentXml = await zip.file("word/document.xml")?.async("string");
     
     if (!documentXml) {
-      console.log("document.xml not found in DOCX, trying fallback");
-      return fallbackDocxExtraction(bytes);
+      return "";
     }
     
-    // Extract text from XML
     const textMatches = documentXml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g);
     if (textMatches) {
       const text = textMatches
@@ -317,29 +453,13 @@ async function extractDocxText(bytes: Uint8Array): Promise<string> {
             .replace(/&apos;/g, "'");
         })
         .join(" ");
-      console.log(`DOCX parsed with JSZip, extracted ${text.length} characters`);
+      console.log(`DOCX extracted ${text.length} characters`);
       return text;
     }
     
-    return fallbackDocxExtraction(bytes);
+    return "";
   } catch (error) {
     console.error("DOCX extraction error:", error);
-    return fallbackDocxExtraction(bytes);
+    return "";
   }
-}
-
-function fallbackDocxExtraction(bytes: Uint8Array): string {
-  const textDecoder = new TextDecoder("utf-8", { fatal: false });
-  const rawText = textDecoder.decode(bytes);
-  
-  const textMatches = rawText.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
-  if (textMatches) {
-    const text = textMatches
-      .map((m) => m.replace(/<[^>]+>/g, ""))
-      .join(" ");
-    console.log(`Fallback DOCX extraction: ${text.length} characters`);
-    return text;
-  }
-  
-  return "";
 }
