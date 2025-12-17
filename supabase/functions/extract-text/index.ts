@@ -1,11 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
-
-// Helper function to convert Uint8Array to base64
-function uint8ArrayToBase64(bytes: Uint8Array): string {
-  return base64Encode(bytes.buffer as ArrayBuffer);
-}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,36 +53,43 @@ serve(async (req) => {
       const bytes = new Uint8Array(arrayBuffer);
       
       console.log(`Processing file: ${fileName}, size: ${file.size} bytes`);
-      
+
       if (fileName.endsWith(".pdf")) {
-        // Use OpenAI to extract text from PDF
-        text = await extractPdfTextWithOpenAI(bytes, fileName);
+        // Prefer deterministic extraction first (no external API), then fallback if needed
+        text = await extractPdfText(bytes, fileName);
       } else if (fileName.endsWith(".docx")) {
         text = await extractDocxText(bytes);
       }
 
       text = cleanText(text);
-      
+
       if (text.length > 50000) {
         text = text.slice(0, 50000);
       }
 
       console.log(`Extracted ${text.length} characters from file`);
 
-      if (text.length < 50) {
-        text = "Não foi possível extrair texto suficiente do arquivo. Por favor, cole o texto do currículo diretamente.";
+      // If we couldn't get meaningful text, fail explicitly so the UI can guide the user.
+      if (text.length < 200) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Não foi possível extrair texto suficiente do PDF/DOCX. Se for um PDF escaneado (imagem), envie um DOCX ou cole o texto do currículo.",
+          }),
+          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
     } else {
       const rawBody = await req.json();
       const validationResult = jsonInputSchema.safeParse(rawBody);
-      
+
       if (!validationResult.success) {
         return new Response(
-          JSON.stringify({ error: "Invalid input", details: validationResult.error.errors.map(e => e.message) }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Invalid input", details: validationResult.error.errors.map((e) => e.message) }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      
+
       text = validationResult.data.text;
     }
 
@@ -99,13 +100,10 @@ serve(async (req) => {
   } catch (error) {
     console.error("Extract error:", error);
     const errorMessage = error instanceof Error ? error.message : "Erro ao extrair texto";
-    return new Response(
-      JSON.stringify({ 
-        error: errorMessage,
-        text: "Não foi possível extrair o texto do arquivo. Por favor, cole o texto do currículo diretamente." 
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
 
@@ -118,88 +116,57 @@ function cleanText(text: string): string {
     .trim();
 }
 
-async function extractPdfTextWithOpenAI(bytes: Uint8Array, fileName: string): Promise<string> {
-  const openAIApiKey = Deno.env.get("Open_AI");
-  
-  if (!openAIApiKey) {
-    console.error("OpenAI API key not found");
-    return fallbackPdfExtraction(bytes);
-  }
-
+async function extractPdfTextWithPdfJs(bytes: Uint8Array): Promise<string> {
   try {
-    // Convert PDF to base64
-    const base64Pdf = uint8ArrayToBase64(bytes);
-    
-    console.log("Sending PDF to OpenAI for text extraction...");
-    
-    // Use GPT-4o to extract text from the PDF
-    // We'll send it as a data URL and ask the model to extract all text
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openAIApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `Você é um especialista em extração de texto de documentos. 
-Sua tarefa é extrair TODO o texto visível do documento PDF fornecido.
-Retorne APENAS o texto extraído, sem formatação adicional, comentários ou explicações.
-Mantenha a estrutura do documento (parágrafos, listas, seções).
-Se o documento for um currículo, extraia todas as informações: nome, contato, experiência, educação, habilidades, etc.`
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Extraia todo o texto deste documento PDF (arquivo: ${fileName}). Retorne apenas o texto extraído.`
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:application/pdf;base64,${base64Pdf}`,
-                  detail: "high"
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 4096,
-      }),
-    });
+    const pdfjsLib = await import(
+      "https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.mjs?target=deno",
+    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("OpenAI API error:", response.status, errorText);
-      
-      // If the model doesn't support PDF directly, try alternative approach
-      if (response.status === 400) {
-        console.log("Trying alternative extraction with file upload...");
-        return await extractPdfWithAssistant(bytes, openAIApiKey);
-      }
-      
-      return fallbackPdfExtraction(bytes);
+    const loadingTask = (pdfjsLib as any).getDocument({ data: bytes, disableWorker: true } as any);
+    const pdf = await loadingTask.promise;
+
+    const maxPages = Math.min(pdf.numPages ?? 1, 25);
+    const pages: string[] = [];
+
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const content = await page.getTextContent();
+      const pageText = (content.items ?? [])
+        .map((item: any) => (typeof item?.str === "string" ? item.str : ""))
+        .join(" ")
+        .replace(/[ ]{2,}/g, " ")
+        .trim();
+
+      if (pageText) pages.push(pageText);
     }
 
-    const data = await response.json();
-    const extractedText = data.choices?.[0]?.message?.content || "";
-    
-    console.log(`OpenAI extracted ${extractedText.length} characters`);
-    
-    if (extractedText.length < 50) {
-      console.log("OpenAI extraction returned too little text, trying fallback");
-      return fallbackPdfExtraction(bytes);
-    }
-    
-    return extractedText;
-  } catch (error) {
-    console.error("OpenAI extraction error:", error);
-    return fallbackPdfExtraction(bytes);
+    return pages.join("\n\n");
+  } catch (e) {
+    console.error("PDF.js extraction error:", e);
+    return "";
   }
+}
+
+async function extractPdfText(bytes: Uint8Array, fileName: string): Promise<string> {
+  // 1) Deterministic extraction first (most reliable for text-based PDFs)
+  console.log("Extracting PDF text with PDF.js...", { fileName });
+  const pdfJsText = await extractPdfTextWithPdfJs(bytes);
+  console.log("PDF.js extracted chars:", pdfJsText.length);
+
+  if (pdfJsText.length >= 200) return pdfJsText;
+
+  // 2) If PDF is image-based / unusual, try OpenAI assistants as a fallback
+  const openAIApiKey = Deno.env.get("Open_AI");
+  if (openAIApiKey) {
+    console.log("PDF.js returned too little text; trying OpenAI assistant fallback...");
+    const assistantText = await extractPdfWithAssistant(bytes, openAIApiKey);
+    if (assistantText.length >= 200) return assistantText;
+  } else {
+    console.error("OpenAI API key not found (Open_AI)");
+  }
+
+  // 3) Last-resort heuristic
+  return fallbackPdfExtraction(bytes);
 }
 
 async function extractPdfWithAssistant(bytes: Uint8Array, apiKey: string): Promise<string> {
