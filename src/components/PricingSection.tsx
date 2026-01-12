@@ -42,6 +42,7 @@ const plans: Plan[] = [
     icon: Crown,
     features: [
       "12 análises completas por mês",
+      "4 currículos reescritos por mês",
       "Relatório PDF detalhado",
       "Pontos fortes e fracos",
       "Palavras-chave faltantes",
@@ -59,6 +60,7 @@ const plans: Plan[] = [
     icon: Rocket,
     features: [
       "Análises ilimitadas",
+      "Currículos reescritos ilimitados",
       "Relatório PDF detalhado",
       "Pontos fortes e fracos",
       "Palavras-chave faltantes",
