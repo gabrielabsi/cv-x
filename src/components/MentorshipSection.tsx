@@ -106,8 +106,8 @@ export function MentorshipSection() {
                   <div>
                     <p className="text-sm text-muted-foreground">Mentoria Individual</p>
                     <div className="flex items-center gap-3">
-                      <p className="text-lg text-muted-foreground line-through decoration-destructive decoration-2">R$ 399</p>
-                      <p className="text-2xl font-bold font-display text-foreground">R$ 199</p>
+                      <p className="text-lg text-muted-foreground line-through decoration-destructive decoration-2">R$ 499</p>
+                      <p className="text-2xl font-bold font-display text-foreground">R$ 299</p>
                     </div>
                     <p className="text-xs text-accent font-medium mt-1">🚀 Promoção de Lançamento - Por tempo limitado!</p>
                   </div>
