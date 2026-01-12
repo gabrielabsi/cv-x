@@ -6,7 +6,8 @@ import {
   Loader2,
   Lock,
   Target,
-  Globe
+  Globe,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,9 +26,13 @@ import { extractTextFromFile } from "@/lib/analysis";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CVRewriteResult, RewriteContent } from "./CVRewriteResult";
+import { RewriteUsageCounter } from "./RewriteUsageCounter";
 
 interface CVRewriteCardProps {
   hasActiveSubscription: boolean;
+  rewritesUsed?: number;
+  rewritesLimit?: number;
+  productName?: string;
   onUpgrade: () => void;
 }
 
@@ -40,7 +45,13 @@ const LOADING_MESSAGES = [
   "Finalizando...",
 ];
 
-export const CVRewriteCard = ({ hasActiveSubscription, onUpgrade }: CVRewriteCardProps) => {
+export const CVRewriteCard = ({ 
+  hasActiveSubscription, 
+  rewritesUsed = 0,
+  rewritesLimit = 0,
+  productName,
+  onUpgrade 
+}: CVRewriteCardProps) => {
   const [linkedInUrl, setLinkedInUrl] = useState("");
   const [linkedInProfileData, setLinkedInProfileData] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -53,9 +64,21 @@ export const CVRewriteCard = ({ hasActiveSubscription, onUpgrade }: CVRewriteCar
   const { toast } = useToast();
   const { user } = useAuth();
 
+  const hasRewriteAccess = rewritesLimit > 0;
+  const hasReachedLimit = rewritesLimit < 999999 && rewritesUsed >= rewritesLimit;
+
   const handleRewrite = async () => {
-    if (!hasActiveSubscription) {
+    if (!hasActiveSubscription || !hasRewriteAccess) {
       onUpgrade();
+      return;
+    }
+
+    if (hasReachedLimit) {
+      toast({
+        title: "Limite atingido",
+        description: "Você já usou todos os seus currículos reescritos este mês.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -181,26 +204,56 @@ export const CVRewriteCard = ({ hasActiveSubscription, onUpgrade }: CVRewriteCar
         </div>
       )}
 
-      {!hasActiveSubscription ? (
+      {!hasActiveSubscription || !hasRewriteAccess ? (
         /* Paywall */
         <div className="text-center py-8">
           <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-muted-foreground" />
           </div>
           <h4 className="text-lg font-semibold text-foreground mb-2">
-            Funcionalidade Premium
+            {hasActiveSubscription ? "Upgrade Necessário" : "Funcionalidade Premium"}
           </h4>
           <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-            Assine um plano para ter acesso à reescrita inteligente do seu currículo.
+            {hasActiveSubscription 
+              ? "Seu plano atual não inclui reescrita de currículo. Faça upgrade para o plano Intermediário ou Avançado."
+              : "Assine um plano para ter acesso à reescrita inteligente do seu currículo."
+            }
           </p>
           <Button variant="hero" onClick={onUpgrade}>
-            Ver Planos
+            {hasActiveSubscription ? "Fazer Upgrade" : "Ver Planos"}
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      ) : hasReachedLimit ? (
+        /* Limit reached */
+        <div className="text-center py-8">
+          <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
+          </div>
+          <h4 className="text-lg font-semibold text-foreground mb-2">
+            Limite Mensal Atingido
+          </h4>
+          <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+            Você já usou seus {rewritesLimit} currículos reescritos este mês. 
+            Faça upgrade para o plano Avançado para ter reescritas ilimitadas.
+          </p>
+          <Button variant="hero" onClick={onUpgrade}>
+            Fazer Upgrade
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       ) : (
         /* Form */
         <div className="space-y-5">
+          {/* Usage Counter */}
+          {hasRewriteAccess && (
+            <RewriteUsageCounter 
+              used={rewritesUsed} 
+              limit={rewritesLimit}
+              productName={productName}
+            />
+          )}
+
           {/* Resume Input */}
           <div>
             <Label className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">

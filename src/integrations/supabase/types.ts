@@ -170,6 +170,8 @@ export type Database = {
           period_end: string
           period_start: string
           product_type: string
+          rewrites_limit: number
+          rewrites_used: number
           stripe_subscription_id: string | null
           updated_at: string
           user_id: string
@@ -182,6 +184,8 @@ export type Database = {
           period_end: string
           period_start: string
           product_type?: string
+          rewrites_limit?: number
+          rewrites_used?: number
           stripe_subscription_id?: string | null
           updated_at?: string
           user_id: string
@@ -194,6 +198,8 @@ export type Database = {
           period_end?: string
           period_start?: string
           product_type?: string
+          rewrites_limit?: number
+          rewrites_used?: number
           stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string

@@ -12,13 +12,23 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-// Product limits mapping
+// Product limits mapping (analyses)
 const PRODUCT_LIMITS: Record<string, number> = {
   "prod_SoLMeWK4h9D90o": 8,       // CVX Básico (old) - 8 analyses
   "prod_SoLNLB46DyQGr1": 12,      // CVX Intermediário (old) - 12 analyses
   "prod_SoLNjxp9RQNJIo": 999999,  // CVX Avançado (old) - unlimited
   "prod_TY5YW5pWY0NLax": 8,       // CVX Básico - 8 analyses
   "prod_TY5ZXRFPInS0UH": 12,      // CVX Intermediário - 12 analyses
+  "prod_TY5ZiELFu8XH7y": 999999,  // CVX Avançado - unlimited
+};
+
+// Product limits for CV rewrites
+const REWRITE_LIMITS: Record<string, number> = {
+  "prod_SoLMeWK4h9D90o": 0,       // CVX Básico (old) - 0 rewrites
+  "prod_SoLNLB46DyQGr1": 4,       // CVX Intermediário (old) - 4 rewrites
+  "prod_SoLNjxp9RQNJIo": 999999,  // CVX Avançado (old) - unlimited
+  "prod_TY5YW5pWY0NLax": 0,       // CVX Básico - 0 rewrites
+  "prod_TY5ZXRFPInS0UH": 4,       // CVX Intermediário - 4 rewrites
   "prod_TY5ZiELFu8XH7y": 999999,  // CVX Avançado - unlimited
 };
 
@@ -71,6 +81,8 @@ serve(async (req) => {
         subscribed: false,
         analyses_used: 0,
         analyses_limit: 0,
+        rewrites_used: 0,
+        rewrites_limit: 0,
         product_name: null,
         subscription_end: null,
       }), {
@@ -93,6 +105,7 @@ serve(async (req) => {
     let productName = null;
     let subscriptionEnd = null;
     let analysesLimit = 0;
+    let rewritesLimit = 0;
     let periodStart = null;
     let periodEnd = null;
     let stripeSubscriptionId = null;
@@ -125,13 +138,15 @@ serve(async (req) => {
       productId = subscription.items.data[0]?.price?.product as string;
       productName = PRODUCT_NAMES[productId] || "Plano Ativo";
       analysesLimit = PRODUCT_LIMITS[productId] || 0;
-      logStep("Determined subscription tier", { productId, productName, analysesLimit });
+      rewritesLimit = REWRITE_LIMITS[productId] || 0;
+      logStep("Determined subscription tier", { productId, productName, analysesLimit, rewritesLimit });
     } else {
       logStep("No active subscription found");
     }
 
     // Get or create usage record for current period
     let analysesUsed = 0;
+    let rewritesUsed = 0;
     
     if (hasActiveSub && periodStart && periodEnd) {
       // Check if usage record exists for current period
@@ -150,7 +165,8 @@ serve(async (req) => {
 
       if (existingUsage && existingUsage.length > 0) {
         analysesUsed = existingUsage[0].analyses_used;
-        logStep("Found existing usage record", { analysesUsed });
+        rewritesUsed = existingUsage[0].rewrites_used || 0;
+        logStep("Found existing usage record", { analysesUsed, rewritesUsed });
       } else {
         // Create new usage record for this period
         const { error: insertError } = await supabaseClient
@@ -161,6 +177,8 @@ serve(async (req) => {
             period_end: periodEnd,
             analyses_used: 0,
             analyses_limit: analysesLimit,
+            rewrites_used: 0,
+            rewrites_limit: rewritesLimit,
             stripe_subscription_id: stripeSubscriptionId,
             product_type: productId,
           });
@@ -180,6 +198,8 @@ serve(async (req) => {
       subscription_end: subscriptionEnd,
       analyses_used: analysesUsed,
       analyses_limit: analysesLimit,
+      rewrites_used: rewritesUsed,
+      rewrites_limit: rewritesLimit,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
