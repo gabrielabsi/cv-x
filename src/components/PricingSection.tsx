@@ -14,6 +14,7 @@ interface Plan {
   analyses: string;
   icon: React.ElementType;
   features: string[];
+  highlight?: string;
   popular?: boolean;
 }
 
@@ -23,10 +24,10 @@ const plans: Plan[] = [
     name: "CVX Básico",
     price: "R$ 16,99",
     priceValue: 1699,
-    analyses: "8 análises/mês",
+    analyses: "1 análise/mês",
     icon: Zap,
     features: [
-      "8 análises completas por mês",
+      "1 análise completa por mês",
       "Relatório PDF detalhado",
       "Pontos fortes e fracos",
       "Palavras-chave faltantes",
@@ -38,10 +39,10 @@ const plans: Plan[] = [
     name: "CVX Intermediário",
     price: "R$ 24,99",
     priceValue: 2499,
-    analyses: "12 análises/mês",
+    analyses: "10 análises/mês",
     icon: Crown,
     features: [
-      "12 análises completas por mês",
+      "10 análises completas por mês",
       "4 currículos reescritos por mês",
       "Relatório PDF detalhado",
       "Pontos fortes e fracos",
@@ -49,6 +50,7 @@ const plans: Plan[] = [
       "Sugestões de melhoria",
       "Prioridade no suporte",
     ],
+    highlight: "🎓 Mentoria por R$ 299/ano (valor promocional)",
     popular: true,
   },
   {
@@ -68,6 +70,7 @@ const plans: Plan[] = [
       "Suporte prioritário",
       "Acesso antecipado a novidades",
     ],
+    highlight: "🎓 Mentoria por R$ 199/ano (valor especial)",
   },
 ];
 
@@ -158,6 +161,12 @@ export function PricingSection() {
                 <span className="text-3xl font-bold font-display text-foreground">{plan.price}</span>
                 <span className="text-muted-foreground">/mês</span>
               </div>
+
+              {plan.highlight && (
+                <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                  <p className="text-sm font-medium text-primary">{plan.highlight}</p>
+                </div>
+              )}
 
               <ul className="space-y-3 mb-6">
                 {plan.features.map((feature, i) => (
