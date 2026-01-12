@@ -1,6 +1,21 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Zap, Shield, Cpu, Mail } from "lucide-react";
+import { 
+  Sparkles, 
+  Zap, 
+  Shield, 
+  Target, 
+  Mail, 
+  Upload, 
+  Search, 
+  FileCheck,
+  CheckCircle2,
+  Users,
+  ArrowRight,
+  Briefcase,
+  TrendingUp,
+  Globe
+} from "lucide-react";
 import { AnalysisLoading } from "@/components/AnalysisLoading";
 import { Button } from "@/components/ui/button";
 import { AnalysisModal } from "@/components/AnalysisModal";
@@ -13,6 +28,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { AnalysisResult } from "@/lib/analysis";
 import { supabase } from "@/integrations/supabase/client";
 import cvxLogo from "@/assets/cvx-logo.png";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface SubscriptionInfo {
   subscribed: boolean;
@@ -32,7 +53,6 @@ const Index = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
 
-  // Check subscription status when user is logged in
   useEffect(() => {
     const checkSubscription = async () => {
       if (!session) {
@@ -86,16 +106,65 @@ const Index = () => {
     }
   };
 
-  const features = [
-    { icon: Cpu, title: "IA Avançada", description: "Tecnologia de ponta" },
-    { icon: Zap, title: "Instantâneo", description: "Resultado em segundos" },
-    { icon: Shield, title: "Seguro", description: "Dados criptografados" },
+  const proofPoints = [
+    { icon: Target, text: "Score ATS e falhas críticas" },
+    { icon: Search, text: "Keywords faltantes por vaga / área" },
+    { icon: FileCheck, text: "Reescrita profissional (sem inventar dados)" },
   ];
 
-  const stats = [
-    { value: "98%", label: "Precisão" },
-    { value: "50K+", label: "Análises" },
-    { value: "4.9", label: "Avaliação" },
+  const howItWorks = [
+    {
+      step: "1",
+      title: "Envie seu currículo",
+      description: "PDF ou texto. Se quiser, cole também a Job Description.",
+      icon: Upload,
+    },
+    {
+      step: "2", 
+      title: "Receba o diagnóstico",
+      description: "Onde você está perdendo pontos no ATS e no olhar humano.",
+      icon: Search,
+    },
+    {
+      step: "3",
+      title: "Desbloqueie o CV reescrito (Pro)",
+      description: "Versão final + bullets fortes + estrutura pronta para Word/LinkedIn.",
+      icon: Sparkles,
+    },
+  ];
+
+  const proFeatures = [
+    "Currículo reescrito com impacto",
+    "Summary pronto pra LinkedIn",
+    "Bullets orientados a resultados",
+    "Skills e keywords recomendadas",
+    "Checklist do que ajustar (pra subir seu score)",
+  ];
+
+  const targetAudience = [
+    { icon: Briefcase, text: "Está aplicando para vagas e não recebe resposta" },
+    { icon: TrendingUp, text: "Quer migrar de área e precisa reposicionar o CV" },
+    { icon: Target, text: "Precisa adaptar CV para uma vaga específica" },
+    { icon: Users, text: "Quer parecer sênior no papel (sem mentir)" },
+  ];
+
+  const faqItems = [
+    {
+      question: "Isso inventa experiências?",
+      answer: "Não. O CVX melhora forma e impacto sem criar dados falsos.",
+    },
+    {
+      question: "Posso colar uma vaga?",
+      answer: "Sim — e isso aumenta muito a qualidade do resultado.",
+    },
+    {
+      question: "Funciona em português e inglês?",
+      answer: "Sim.",
+    },
+    {
+      question: "Recebo em quanto tempo?",
+      answer: "Em minutos.",
+    },
   ];
 
   return (
@@ -113,65 +182,36 @@ const Index = () => {
       </header>
 
       <main className="relative container pb-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center pt-8 pb-16">
-          <div className="text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 animate-fade-up">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Powered by AI</span>
-            </div>
+        {/* HERO SECTION */}
+        <div className="max-w-4xl mx-auto text-center pt-8 pb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 animate-fade-up">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-primary">Powered by AI</span>
+          </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-display text-foreground mb-6 leading-[1.1] animate-fade-up delay-100">
-              Análise Inteligente de{" "}
-              <span className="text-foreground">Currículo com IA</span>
-            </h1>
-            
-            <p className="text-lg md:text-xl text-muted-foreground max-w-xl mb-10 animate-fade-up delay-200">
-              Avalie seu currículo com tecnologia usada por recrutadores de alto nível.
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-display text-foreground mb-6 leading-tight animate-fade-up delay-100">
+            Seu currículo reescrito para{" "}
+            <span className="text-gradient">passar no ATS</span> e chamar entrevista.
+          </h1>
+          
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-6 animate-fade-up delay-200">
+            Envie seu CV e receba em minutos um diagnóstico + versão otimizada com bullets de impacto e keywords certas para a vaga.
+          </p>
+
+          <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground animate-fade-up delay-300">
+            <p className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-accent" />
+              Sem enrolação. Sem template genérico.
             </p>
-
-            <div className="flex items-center gap-8 md:gap-12 animate-fade-up delay-300">
-              {stats.map((stat, i) => (
-                <div key={i} className="text-left">
-                  <div className="text-2xl md:text-3xl font-bold font-display text-foreground">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative flex items-center justify-center animate-fade-up delay-300">
-            <div className="relative w-72 h-72 md:w-80 md:h-80">
-              <div className="absolute inset-0 rounded-full border border-primary/20 animate-orbit" style={{ animationDuration: '25s' }}>
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary shadow-glow-sm" />
-              </div>
-              <div className="absolute inset-6 rounded-full border border-accent/20 animate-orbit" style={{ animationDuration: '18s', animationDirection: 'reverse' }}>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 rounded-full bg-accent shadow-glow-cyan" />
-              </div>
-              <div className="absolute inset-20 rounded-full bg-card border border-border flex items-center justify-center shadow-card-premium">
-                <div className="text-center">
-                  <div className="text-4xl font-bold font-display text-gradient">AI</div>
-                  <div className="text-xs text-muted-foreground mt-1">Scanning</div>
-                </div>
-              </div>
-            </div>
+            <p className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-accent" />
+              Resultado pronto pra copiar e colar.
+            </p>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12 animate-fade-up delay-300">
-          {features.map((feature, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card/50 border border-border backdrop-blur-sm hover-lift group">
-              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                <feature.icon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-foreground text-sm">{feature.title}</h3>
-                <p className="text-xs text-muted-foreground">{feature.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="max-w-2xl mx-auto animate-fade-up delay-400">
+        {/* MAIN CTA CARD */}
+        <div className="max-w-2xl mx-auto mb-16 animate-fade-up delay-400">
           <div className="p-6 md:p-8 rounded-2xl bg-card border border-border shadow-card-premium relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
             <div className="relative">
@@ -180,9 +220,115 @@ const Index = () => {
           </div>
         </div>
 
+        {/* PROOF POINTS */}
+        <div className="max-w-3xl mx-auto mb-20 animate-fade-up">
+          <h2 className="text-xl md:text-2xl font-bold font-display text-center text-foreground mb-8">
+            O CVX te entrega o que recrutador realmente filtra:
+          </h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            {proofPoints.map((point, i) => (
+              <div key={i} className="flex items-center gap-4 p-5 rounded-xl bg-card/50 border border-border backdrop-blur-sm hover-lift group">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                  <point.icon className="w-6 h-6 text-primary" />
+                </div>
+                <p className="font-medium text-foreground">{point.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* HOW IT WORKS */}
+        <div className="max-w-4xl mx-auto mb-20 animate-fade-up">
+          <h2 className="text-2xl md:text-3xl font-bold font-display text-center text-foreground mb-12">
+            Como funciona
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {howItWorks.map((item, i) => (
+              <div key={i} className="text-center">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <item.icon className="w-8 h-8 text-primary" />
+                </div>
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-accent text-accent-foreground font-bold text-sm mb-3">
+                  {item.step}
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{item.title}</h3>
+                <p className="text-muted-foreground text-sm">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* WHAT YOU GET (PRO) */}
+        <div className="max-w-2xl mx-auto mb-20 animate-fade-up">
+          <div className="p-8 rounded-2xl bg-gradient-to-br from-primary/10 via-card to-accent/5 border border-primary/20">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold font-display text-foreground">O que você recebe</h2>
+                <p className="text-sm text-primary font-medium">No plano Pro</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {proFeatures.map((feature, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-accent flex-shrink-0" />
+                  <span className="text-foreground">{feature}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* TARGET AUDIENCE */}
+        <div className="max-w-3xl mx-auto mb-20 animate-fade-up">
+          <h2 className="text-2xl md:text-3xl font-bold font-display text-center text-foreground mb-4">
+            Para quem é
+          </h2>
+          <p className="text-center text-muted-foreground mb-8">Perfeito pra quem:</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {targetAudience.map((item, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card/50 border border-border">
+                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+                  <item.icon className="w-5 h-5 text-accent" />
+                </div>
+                <p className="text-foreground text-sm">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* PRICING */}
         <PricingSection />
+
+        {/* FAQ */}
+        <div className="max-w-2xl mx-auto mb-20 animate-fade-up">
+          <h2 className="text-2xl md:text-3xl font-bold font-display text-center text-foreground mb-8">
+            Perguntas Frequentes
+          </h2>
+          <Accordion type="single" collapsible className="space-y-3">
+            {faqItems.map((item, i) => (
+              <AccordionItem 
+                key={i} 
+                value={`item-${i}`}
+                className="bg-card/50 border border-border rounded-xl px-5"
+              >
+                <AccordionTrigger className="text-foreground font-medium hover:no-underline">
+                  {item.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+
+        {/* MENTORSHIP */}
         <MentorshipSection />
 
+        {/* CONTACT */}
         <div className="text-center mt-16 animate-fade-up">
           <p className="text-muted-foreground mb-4">Dúvidas ou sugestões?</p>
           <Button variant="outline" asChild className="gap-2">
