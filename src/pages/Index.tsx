@@ -1,21 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Sparkles, 
-  Zap, 
-  Shield, 
-  Target, 
-  Mail, 
-  Upload, 
-  Search, 
-  FileCheck,
-  CheckCircle2,
-  Users,
-  ArrowRight,
-  Briefcase,
-  TrendingUp,
-  Globe
-} from "lucide-react";
+import { Sparkles, Zap, Shield, Target, Mail, Upload, Search, FileCheck, CheckCircle2, Users, ArrowRight, Briefcase, TrendingUp, Globe } from "lucide-react";
 import { AnalysisLoading } from "@/components/AnalysisLoading";
 import { Button } from "@/components/ui/button";
 import { AnalysisModal } from "@/components/AnalysisModal";
@@ -28,13 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AnalysisResult } from "@/lib/analysis";
 import { supabase } from "@/integrations/supabase/client";
 import cvxLogo from "@/assets/cvx-logo.png";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 interface SubscriptionInfo {
   subscribed: boolean;
   product_id: string | null;
@@ -42,29 +21,32 @@ interface SubscriptionInfo {
   analyses_used: number;
   analyses_limit: number;
 }
-
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPremiumResult, setIsPremiumResult] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
-  const { toast } = useToast();
-  const { session } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    session
+  } = useAuth();
   const navigate = useNavigate();
-
   useEffect(() => {
     const checkSubscription = async () => {
       if (!session) {
         setSubscription(null);
         return;
       }
-
       try {
-        const { data, error } = await supabase.functions.invoke("check-subscription");
+        const {
+          data,
+          error
+        } = await supabase.functions.invoke("check-subscription");
         if (error) throw error;
         setSubscription(data);
-        
         if (data?.subscribed === true) {
           navigate("/members");
           return;
@@ -74,24 +56,22 @@ const Index = () => {
         setSubscription(null);
       }
     };
-
     checkSubscription();
   }, [session, navigate]);
-
   const handleFlowAnalyze = async (jobDescription: string, resumeText: string) => {
     setIsLoading(true);
-
     try {
-      const { data, error } = await supabase.functions.invoke("analyze-resume", {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke("analyze-resume", {
         body: {
           resumeText,
           jobDescription,
-          type: "free",
-        },
+          type: "free"
+        }
       });
-
       if (error) throw error;
-
       setAnalysisResult(data);
       setIsPremiumResult(false);
       setIsModalOpen(true);
@@ -99,76 +79,66 @@ const Index = () => {
       toast({
         title: "Erro na análise",
         description: error instanceof Error ? error.message : "Tente novamente.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const proofPoints = [
-    { icon: Target, text: "Score ATS e falhas críticas" },
-    { icon: Search, text: "Keywords faltantes por vaga / área" },
-    { icon: FileCheck, text: "Reescrita profissional (sem inventar dados)" },
-  ];
-
-  const howItWorks = [
-    {
-      step: "1",
-      title: "Envie seu currículo",
-      description: "PDF ou texto. Se quiser, cole também a Job Description.",
-      icon: Upload,
-    },
-    {
-      step: "2", 
-      title: "Receba o diagnóstico",
-      description: "Onde você está perdendo pontos no ATS e no olhar humano.",
-      icon: Search,
-    },
-    {
-      step: "3",
-      title: "Desbloqueie o CV reescrito (Pro)",
-      description: "Versão final + bullets fortes + estrutura pronta para Word/LinkedIn.",
-      icon: Sparkles,
-    },
-  ];
-
-  const proFeatures = [
-    "Currículo reescrito com impacto",
-    "Summary pronto pra LinkedIn",
-    "Bullets orientados a resultados",
-    "Skills e keywords recomendadas",
-    "Checklist do que ajustar (pra subir seu score)",
-  ];
-
-  const targetAudience = [
-    { icon: Briefcase, text: "Está aplicando para vagas e não recebe resposta" },
-    { icon: TrendingUp, text: "Quer migrar de área e precisa reposicionar o CV" },
-    { icon: Target, text: "Precisa adaptar CV para uma vaga específica" },
-    { icon: Users, text: "Quer parecer sênior no papel (sem mentir)" },
-  ];
-
-  const faqItems = [
-    {
-      question: "Isso inventa experiências?",
-      answer: "Não. O CVX melhora forma e impacto sem criar dados falsos.",
-    },
-    {
-      question: "Posso colar uma vaga?",
-      answer: "Sim — e isso aumenta muito a qualidade do resultado.",
-    },
-    {
-      question: "Funciona em português e inglês?",
-      answer: "Sim.",
-    },
-    {
-      question: "Recebo em quanto tempo?",
-      answer: "Em minutos.",
-    },
-  ];
-
-  return (
-    <div className="min-h-screen gradient-hero neural-pattern">
+  const proofPoints = [{
+    icon: Target,
+    text: "Score ATS e falhas críticas"
+  }, {
+    icon: Search,
+    text: "Keywords faltantes por vaga / área"
+  }, {
+    icon: FileCheck,
+    text: "Reescrita profissional (sem inventar dados)"
+  }];
+  const howItWorks = [{
+    step: "1",
+    title: "Envie seu currículo",
+    description: "PDF ou texto. Se quiser, cole também a Job Description.",
+    icon: Upload
+  }, {
+    step: "2",
+    title: "Receba o diagnóstico",
+    description: "Onde você está perdendo pontos no ATS e no olhar humano.",
+    icon: Search
+  }, {
+    step: "3",
+    title: "Desbloqueie o CV reescrito (Pro)",
+    description: "Versão final + bullets fortes + estrutura pronta para Word/LinkedIn.",
+    icon: Sparkles
+  }];
+  const proFeatures = ["Currículo reescrito com impacto", "Summary pronto pra LinkedIn", "Bullets orientados a resultados", "Skills e keywords recomendadas", "Checklist do que ajustar (pra subir seu score)"];
+  const targetAudience = [{
+    icon: Briefcase,
+    text: "Está aplicando para vagas e não recebe resposta"
+  }, {
+    icon: TrendingUp,
+    text: "Quer migrar de área e precisa reposicionar o CV"
+  }, {
+    icon: Target,
+    text: "Precisa adaptar CV para uma vaga específica"
+  }, {
+    icon: Users,
+    text: "Quer parecer sênior no papel (sem mentir)"
+  }];
+  const faqItems = [{
+    question: "Isso inventa experiências?",
+    answer: "Não. O CVX melhora forma e impacto sem criar dados falsos."
+  }, {
+    question: "Posso colar uma vaga?",
+    answer: "Sim — e isso aumenta muito a qualidade do resultado."
+  }, {
+    question: "Funciona em português e inglês?",
+    answer: "Sim."
+  }, {
+    question: "Recebo em quanto tempo?",
+    answer: "Em minutos."
+  }];
+  return <div className="min-h-screen gradient-hero neural-pattern">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[150px] animate-glow-pulse" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/6 rounded-full blur-[120px] animate-glow-pulse delay-300" />
@@ -191,7 +161,7 @@ const Index = () => {
 
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-display text-foreground mb-6 leading-tight animate-fade-up delay-100">
             Seu currículo reescrito para{" "}
-            <span className="text-gradient">passar no ATS</span> e chamar entrevista.
+            <span className="text-gradient text-primary-foreground">passar no ATS</span> e chamar entrevista.
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-6 animate-fade-up delay-200">
@@ -226,14 +196,12 @@ const Index = () => {
             O CVX te entrega o que recrutador realmente filtra:
           </h2>
           <div className="grid md:grid-cols-3 gap-4">
-            {proofPoints.map((point, i) => (
-              <div key={i} className="flex items-center gap-4 p-5 rounded-xl bg-card/50 border border-border backdrop-blur-sm hover-lift group">
+            {proofPoints.map((point, i) => <div key={i} className="flex items-center gap-4 p-5 rounded-xl bg-card/50 border border-border backdrop-blur-sm hover-lift group">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
                   <point.icon className="w-6 h-6 text-primary" />
                 </div>
                 <p className="font-medium text-foreground">{point.text}</p>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
 
@@ -243,8 +211,7 @@ const Index = () => {
             Como funciona
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
-            {howItWorks.map((item, i) => (
-              <div key={i} className="text-center">
+            {howItWorks.map((item, i) => <div key={i} className="text-center">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   <item.icon className="w-8 h-8 text-primary" />
                 </div>
@@ -253,8 +220,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">{item.title}</h3>
                 <p className="text-muted-foreground text-sm">{item.description}</p>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
 
@@ -271,12 +237,10 @@ const Index = () => {
               </div>
             </div>
             <div className="space-y-3">
-              {proFeatures.map((feature, i) => (
-                <div key={i} className="flex items-center gap-3">
+              {proFeatures.map((feature, i) => <div key={i} className="flex items-center gap-3">
                   <CheckCircle2 className="w-5 h-5 text-accent flex-shrink-0" />
                   <span className="text-foreground">{feature}</span>
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
         </div>
@@ -288,14 +252,12 @@ const Index = () => {
           </h2>
           <p className="text-center text-muted-foreground mb-8">Perfeito pra quem:</p>
           <div className="grid sm:grid-cols-2 gap-4">
-            {targetAudience.map((item, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card/50 border border-border">
+            {targetAudience.map((item, i) => <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card/50 border border-border">
                 <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
                   <item.icon className="w-5 h-5 text-accent" />
                 </div>
                 <p className="text-foreground text-sm">{item.text}</p>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
 
@@ -308,20 +270,14 @@ const Index = () => {
             Perguntas Frequentes
           </h2>
           <Accordion type="single" collapsible className="space-y-3">
-            {faqItems.map((item, i) => (
-              <AccordionItem 
-                key={i} 
-                value={`item-${i}`}
-                className="bg-card/50 border border-border rounded-xl px-5"
-              >
+            {faqItems.map((item, i) => <AccordionItem key={i} value={`item-${i}`} className="bg-card/50 border border-border rounded-xl px-5">
                 <AccordionTrigger className="text-foreground font-medium hover:no-underline">
                   {item.question}
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   {item.answer}
                 </AccordionContent>
-              </AccordionItem>
-            ))}
+              </AccordionItem>)}
           </Accordion>
         </div>
 
@@ -342,14 +298,7 @@ const Index = () => {
 
       {isLoading && <AnalysisLoading />}
 
-      <AnalysisModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        result={analysisResult}
-        isPremium={isPremiumResult}
-      />
-    </div>
-  );
+      <AnalysisModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} result={analysisResult} isPremium={isPremiumResult} />
+    </div>;
 };
-
 export default Index;
