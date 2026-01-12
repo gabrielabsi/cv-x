@@ -35,9 +35,16 @@ export interface RewriteContent {
 interface CVRewriteResultProps {
   content: RewriteContent;
   onNewRewrite: () => void;
+  availableFormats?: ("pdf" | "docx")[];
+  onDownload?: (format: "pdf" | "docx") => void;
 }
 
-export const CVRewriteResult = ({ content, onNewRewrite }: CVRewriteResultProps) => {
+export const CVRewriteResult = ({ 
+  content, 
+  onNewRewrite, 
+  availableFormats = [],
+  onDownload 
+}: CVRewriteResultProps) => {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -77,21 +84,10 @@ export const CVRewriteResult = ({ content, onNewRewrite }: CVRewriteResultProps)
 
   const copyAll = () => copyToClipboard(generateFullText(), "Currículo completo");
 
-  const downloadAsTxt = () => {
-    const text = generateFullText();
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "curriculo-otimizado.txt";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({
-      title: "Download iniciado!",
-      description: "Seu currículo foi baixado como TXT.",
-    });
+  const handleDownloadFormat = (format: "pdf" | "docx") => {
+    if (onDownload) {
+      onDownload(format);
+    }
   };
 
   const CopyButton = ({ text, section }: { text: string; section: string }) => (
@@ -145,10 +141,18 @@ export const CVRewriteResult = ({ content, onNewRewrite }: CVRewriteResultProps)
           )}
           Copiar Tudo
         </Button>
-        <Button variant="outline" onClick={downloadAsTxt} className="gap-2">
-          <Download className="w-4 h-4" />
-          Baixar TXT
-        </Button>
+        {availableFormats.includes("pdf") && (
+          <Button variant="outline" onClick={() => handleDownloadFormat("pdf")} className="gap-2">
+            <Download className="w-4 h-4" />
+            Baixar PDF
+          </Button>
+        )}
+        {availableFormats.includes("docx") && (
+          <Button variant="outline" onClick={() => handleDownloadFormat("docx")} className="gap-2">
+            <FileText className="w-4 h-4" />
+            Baixar Word
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}

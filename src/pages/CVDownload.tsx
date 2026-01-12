@@ -22,6 +22,14 @@ interface RewriteContent {
   education: string;
 }
 
+// Product IDs for subscription plans that include CV rewrites
+const SUBSCRIBER_PRODUCTS = [
+  "prod_SoLNLB46DyQGr1", // CVX Intermediário (old)
+  "prod_SoLNjxp9RQNJIo", // CVX Avançado (old)
+  "prod_TY5ZXRFPInS0UH", // CVX Intermediário
+  "prod_TY5ZiELFu8XH7y", // CVX Avançado
+];
+
 const CVDownload = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -33,6 +41,7 @@ const CVDownload = () => {
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [format, setFormat] = useState<string>("pdf");
   const [copied, setCopied] = useState(false);
+  const [isSubscriber, setIsSubscriber] = useState(false);
 
   const sessionId = searchParams.get("session_id");
   const formatParam = searchParams.get("format");
@@ -40,6 +49,24 @@ const CVDownload = () => {
   useEffect(() => {
     if (formatParam) setFormat(formatParam);
   }, [formatParam]);
+
+  // Check if user is a subscriber with CV rewrite access
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data } = await supabase.functions.invoke("check-subscription");
+        if (data?.subscribed && data?.product_id && SUBSCRIBER_PRODUCTS.includes(data.product_id)) {
+          setIsSubscriber(true);
+        }
+      } catch (err) {
+        console.error("Error checking subscription:", err);
+      }
+    };
+    checkSubscription();
+  }, []);
 
   useEffect(() => {
     const generateDocument = async () => {
@@ -86,14 +113,14 @@ const CVDownload = () => {
     generateDocument();
   }, [sessionId, format]);
 
-  const handleDownload = () => {
+  const handleDownload = (downloadFormat: string) => {
     if (!htmlContent) return;
 
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `curriculo-otimizado.${format === "docx" ? "html" : "html"}`;
+    a.download = `curriculo-otimizado.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -101,7 +128,7 @@ const CVDownload = () => {
 
     toast({
       title: "Download iniciado!",
-      description: format === "docx" 
+      description: downloadFormat === "docx" 
         ? "Abra o arquivo HTML no Word e salve como .docx"
         : "Abra o arquivo HTML no navegador e salve como PDF (Ctrl+P)",
     });
@@ -200,10 +227,25 @@ const CVDownload = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <Button variant="hero" className="flex-1" onClick={handleDownload}>
-              <Download className="w-5 h-5" />
-              Baixar {format === "docx" ? "Word" : "PDF"}
-            </Button>
+            {/* Subscribers get both buttons */}
+            {isSubscriber ? (
+              <>
+                <Button variant="hero" className="flex-1" onClick={() => handleDownload("pdf")}>
+                  <Download className="w-5 h-5" />
+                  Baixar PDF
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => handleDownload("docx")}>
+                  <FileText className="w-5 h-5" />
+                  Baixar Word
+                </Button>
+              </>
+            ) : (
+              /* Non-subscribers get only the format they paid for */
+              <Button variant="hero" className="flex-1" onClick={() => handleDownload(format)}>
+                <Download className="w-5 h-5" />
+                Baixar {format === "docx" ? "Word" : "PDF"}
+              </Button>
+            )}
             <Button variant="outline" className="flex-1" onClick={handleCopyAll}>
               {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
               {copied ? "Copiado!" : "Copiar Tudo"}
@@ -288,14 +330,13 @@ const CVDownload = () => {
           <div className="mt-6 p-4 rounded-xl bg-secondary/50 border border-border">
             <h4 className="font-semibold text-foreground mb-2">Como usar:</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
-              {format === "pdf" ? (
+              <li><strong>Para PDF:</strong></li>
+              <li>1. Clique em "Baixar PDF" para baixar o arquivo HTML</li>
+              <li>2. Abra o arquivo no navegador</li>
+              <li>3. Pressione Ctrl+P (ou Cmd+P no Mac) e salve como PDF</li>
+              {(isSubscriber || format === "docx") && (
                 <>
-                  <li>1. Clique em "Baixar PDF" para baixar o arquivo HTML</li>
-                  <li>2. Abra o arquivo no navegador</li>
-                  <li>3. Pressione Ctrl+P (ou Cmd+P no Mac) e salve como PDF</li>
-                </>
-              ) : (
-                <>
+                  <li className="mt-3"><strong>Para Word:</strong></li>
                   <li>1. Clique em "Baixar Word" para baixar o arquivo HTML</li>
                   <li>2. Abra o arquivo no Microsoft Word</li>
                   <li>3. Salve como .docx (Arquivo → Salvar como → Word)</li>
