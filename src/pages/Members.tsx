@@ -54,6 +54,8 @@ interface SubscriptionInfo {
   subscription_end: string | null;
   analyses_used: number;
   analyses_limit: number;
+  rewrites_used: number;
+  rewrites_limit: number;
 }
 
 const Members = () => {
@@ -89,6 +91,8 @@ const Members = () => {
     subscription_end: null,
     analyses_used: 0,
     analyses_limit: 0,
+    rewrites_used: 0,
+    rewrites_limit: 0,
   });
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   
@@ -127,6 +131,8 @@ const Members = () => {
             subscription_end: data.subscription_end || null,
             analyses_used: data.analyses_used || 0,
             analyses_limit: data.analyses_limit || 0,
+            rewrites_used: data.rewrites_used || 0,
+            rewrites_limit: data.rewrites_limit || 0,
           });
         }
       } catch (error) {
@@ -393,6 +399,9 @@ const Members = () => {
           {/* CV Rewrite Card - Premium Feature */}
           <CVRewriteCard 
             hasActiveSubscription={subscription.subscribed}
+            rewritesUsed={subscription.rewrites_used}
+            rewritesLimit={subscription.rewrites_limit}
+            productName={subscription.product_name || undefined}
             onUpgrade={() => navigate("/#pricing")}
           />
 
