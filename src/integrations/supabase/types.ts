@@ -59,6 +59,69 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          feature: string
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          feature: string
+          id?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          feature?: string
+          id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cv_rewrites: {
+        Row: {
+          created_at: string
+          id: string
+          job_description_text: string | null
+          language: string
+          original_cv_text: string
+          rewrite_content: Json
+          target_role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_description_text?: string | null
+          language?: string
+          original_cv_text: string
+          rewrite_content: Json
+          target_role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_description_text?: string | null
+          language?: string
+          original_cv_text?: string
+          rewrite_content?: Json
+          target_role?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

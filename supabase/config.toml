@@ -40,3 +40,6 @@ verify_jwt = true
 
 [functions.fetch-linkedin-profile]
 verify_jwt = true
+
+[functions.rewrite-cv]
+verify_jwt = true
