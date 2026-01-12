@@ -11,6 +11,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import MentorshipSuccess from "./pages/MentorshipSuccess";
 import Members from "./pages/Members";
+import CVDownload from "./pages/CVDownload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/subscription-success" element={<SubscriptionSuccess />} />
             <Route path="/mentorship-success" element={<MentorshipSuccess />} />
             <Route path="/members" element={<Members />} />
+            <Route path="/cv-download" element={<CVDownload />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

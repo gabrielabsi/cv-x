@@ -43,3 +43,12 @@ verify_jwt = true
 
 [functions.rewrite-cv]
 verify_jwt = true
+
+[functions.analyze-improvements]
+verify_jwt = false
+
+[functions.generate-cv-document]
+verify_jwt = false
+
+[functions.create-cv-checkout]
+verify_jwt = false
