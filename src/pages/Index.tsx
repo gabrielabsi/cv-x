@@ -161,7 +161,7 @@ const Index = () => {
 
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-display text-foreground mb-6 leading-tight animate-fade-up delay-100">
             Seu currículo reescrito para{" "}
-            <span className="text-gradient text-primary-foreground">passar no ATS</span> e chamar entrevista.
+            <span className="text-white">passar no ATS</span> e chamar entrevista.
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-6 animate-fade-up delay-200">
