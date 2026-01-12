@@ -12,7 +12,8 @@ import {
   Loader2,
   X,
   FileText,
-  LogOut
+  LogOut,
+  Sparkles
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,6 +33,7 @@ import { UpgradeSection } from "@/components/UpgradeSection";
 import { MentorshipSection } from "@/components/MentorshipSection";
 import { AnalysisLoading } from "@/components/AnalysisLoading";
 import { AnalysisResult } from "@/lib/analysis";
+import { CVRewriteCard } from "@/components/CVRewriteCard";
 import cvxLogo from "@/assets/cvx-logo.png";
 
 interface ExtendedProfile {
@@ -387,6 +389,12 @@ const Members = () => {
               />
             </div>
           )}
+
+          {/* CV Rewrite Card - Premium Feature */}
+          <CVRewriteCard 
+            hasActiveSubscription={subscription.subscribed}
+            onUpgrade={() => navigate("/#pricing")}
+          />
 
           {/* Tabs */}
           <Tabs defaultValue="history" className="space-y-6">
