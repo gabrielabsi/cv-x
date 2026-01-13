@@ -155,6 +155,30 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_private: {
+        Row: {
+          created_at: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -164,7 +188,6 @@ export type Database = {
           full_name: string | null
           id: string
           linkedin_url: string | null
-          phone: string | null
           updated_at: string
           user_id: string
         }
@@ -176,7 +199,6 @@ export type Database = {
           full_name?: string | null
           id?: string
           linkedin_url?: string | null
-          phone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -188,7 +210,6 @@ export type Database = {
           full_name?: string | null
           id?: string
           linkedin_url?: string | null
-          phone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -218,6 +239,42 @@ export type Database = {
           identifier?: string
           request_count?: number
           window_start?: string
+        }
+        Relationships: []
+      }
+      security_events: {
+        Row: {
+          created_at: string
+          details: Json | null
+          endpoint: string | null
+          event_type: string
+          id: string
+          ip_hash: string | null
+          request_id: string | null
+          severity: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          endpoint?: string | null
+          event_type: string
+          id?: string
+          ip_hash?: string | null
+          request_id?: string | null
+          severity?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          endpoint?: string | null
+          event_type?: string
+          id?: string
+          ip_hash?: string | null
+          request_id?: string | null
+          severity?: string
+          user_id?: string | null
         }
         Relationships: []
       }
