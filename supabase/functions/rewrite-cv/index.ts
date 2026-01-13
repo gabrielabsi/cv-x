@@ -1,53 +1,45 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-const logStep = (step: string, details?: unknown) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[REWRITE-CV] ${step}${detailsStr}`);
-};
+import {
+  getCorsHeaders,
+  createSecureError,
+  secureLog,
+  generateRequestId,
+  ERROR_CODES,
+} from "../_shared/security.ts";
 
 const REWRITE_PROMPT = `Você é um especialista em reescrita de currículos otimizados para ATS (Applicant Tracking Systems) e recrutadores humanos.
 
 REGRAS ABSOLUTAS:
-1. NÃO INVENTE DADOS - Preserve todas as informações reais do currículo original (empresas, datas, cargos, formação)
+1. NÃO INVENTE DADOS - Preserve todas as informações reais do currículo original
 2. NÃO ADICIONE certificações, empresas, cursos ou cargos que não existem no CV original
 3. APENAS melhore a clareza, impacto, concisão e formato ATS
-4. Se algo estiver faltando, sugira melhorias em "notes" - nunca invente
-5. Para quantificação: use apenas números que o usuário forneceu. Se não houver números, use placeholders: [X%], [R$X], [N colaboradores], [N projetos]
+4. Para quantificação sem números: use placeholders [X%], [R$X], [N]
 
-DIRETRIZES DE REESCRITA:
-- Use verbos de ação fortes no passado (Liderou, Implementou, Otimizou, Desenvolveu, Reduziu, Aumentou)
-- Foque em resultados e impacto, não apenas responsabilidades
-- Formato: AÇÃO + CONTEXTO + RESULTADO (quando possível)
-- Evite jargões excessivos, mantenha clareza
-- Otimize para ATS: use keywords relevantes para a área/vaga
-- Mantenha bullets concisos (1-2 linhas máximo)
-- Summary: 3-5 linhas impactantes destacando valor único
+DIRETRIZES:
+- Use verbos de ação fortes no passado
+- Foque em resultados e impacto
+- Formato: AÇÃO + CONTEXTO + RESULTADO
+- Otimize para ATS: use keywords relevantes
+- Mantenha bullets concisos (1-2 linhas)
+- Summary: 3-5 linhas impactantes
 
-FORMATO DE OUTPUT (JSON válido):
+FORMATO DE OUTPUT (JSON):
 {
-  "headline": "Título profissional conciso e impactante",
-  "summary": "Resumo profissional de 3-5 linhas",
-  "experience": [
-    {
-      "company": "Nome da Empresa",
-      "role": "Cargo",
-      "date": "Período (mês/ano - mês/ano ou atual)",
-      "bullets": ["Bullet 1 com resultado", "Bullet 2 com resultado", "Bullet 3 com resultado"]
-    }
-  ],
-  "skills": ["Skill 1", "Skill 2", "Skill 3"],
-  "education": "Formação acadêmica formatada",
-  "ats_keywords_added": ["keyword1", "keyword2"],
-  "notes": ["Sugestão de melhoria 1", "Sugestão de melhoria 2"]
+  "headline": "Título profissional",
+  "summary": "Resumo de 3-5 linhas",
+  "experience": [{"company": "Empresa", "role": "Cargo", "date": "Período", "bullets": ["..."]}],
+  "skills": ["Skill 1", "Skill 2"],
+  "education": "Formação acadêmica",
+  "ats_keywords_added": ["keyword1"],
+  "notes": ["Sugestão 1"]
 }`;
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  const requestId = generateRequestId();
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -59,53 +51,68 @@ serve(async (req) => {
   );
 
   try {
-    logStep("Function started");
+    secureLog("rewrite-cv", "started", requestId);
 
-    // Authenticate user
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.UNAUTHORIZED.code, ERROR_CODES.UNAUTHORIZED.message, requestId)),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    const user = userData.user;
-    if (!user?.id) throw new Error("User not authenticated");
-    logStep("User authenticated", { userId: user.id });
+    
+    if (userError || !userData.user?.id) {
+      secureLog("rewrite-cv", "auth_failed", requestId);
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.UNAUTHORIZED.code, ERROR_CODES.UNAUTHORIZED.message, requestId)),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Parse request body
-    const { resumeText, jobDescription, targetRole, language } = await req.json();
+    const user = userData.user;
+    secureLog("rewrite-cv", "authenticated", requestId, { userId: user.id });
+
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INVALID_INPUT.code, "JSON inválido", requestId)),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { resumeText, jobDescription, targetRole, language } = body;
     
     if (!resumeText || resumeText.trim().length < 100) {
-      throw new Error("Texto do currículo é obrigatório (mínimo 100 caracteres)");
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INVALID_INPUT.code, "Texto do currículo muito curto (mínimo 100 caracteres)", requestId)),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    logStep("Request parsed", { 
+    secureLog("rewrite-cv", "input_validated", requestId, { 
       resumeLength: resumeText.length, 
-      hasJobDescription: !!jobDescription,
-      targetRole,
-      language 
+      hasJobDescription: !!jobDescription 
     });
 
-    // Build the prompt
     let userPrompt = `CURRÍCULO ORIGINAL:\n${resumeText}\n\n`;
-    
-    if (jobDescription) {
-      userPrompt += `DESCRIÇÃO DA VAGA (otimize keywords e alinhamento):\n${jobDescription}\n\n`;
-    }
-    
-    if (targetRole) {
-      userPrompt += `CARGO ALVO: ${targetRole}\n\n`;
-    }
-    
-    userPrompt += `IDIOMA DE SAÍDA: ${language || 'pt-BR'}\n\n`;
-    userPrompt += `Reescreva o currículo seguindo as regras e retorne APENAS o JSON válido.`;
+    if (jobDescription) userPrompt += `DESCRIÇÃO DA VAGA:\n${jobDescription}\n\n`;
+    if (targetRole) userPrompt += `CARGO ALVO: ${targetRole}\n\n`;
+    userPrompt += `IDIOMA: ${language || 'pt-BR'}\n\nRetorne APENAS o JSON.`;
 
-    // Call Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!LOVABLE_API_KEY) {
+      secureLog("rewrite-cv", "missing_api_key", requestId);
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, ERROR_CODES.INTERNAL_ERROR.message, requestId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    logStep("Calling AI Gateway");
-    
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -123,45 +130,46 @@ serve(async (req) => {
     });
 
     if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      logStep("AI Gateway error", { status: aiResponse.status, error: errorText });
+      secureLog("rewrite-cv", "ai_error", requestId, { status: aiResponse.status });
       
       if (aiResponse.status === 429) {
-        throw new Error("Limite de requisições excedido. Tente novamente em alguns minutos.");
+        return new Response(
+          JSON.stringify(createSecureError(ERROR_CODES.RATE_LIMITED.code, ERROR_CODES.RATE_LIMITED.message, requestId)),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-      if (aiResponse.status === 402) {
-        throw new Error("Créditos de IA esgotados. Entre em contato com o suporte.");
-      }
-      throw new Error("Erro ao processar currículo. Tente novamente.");
+      
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, "Erro ao processar. Tente novamente.", requestId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const aiData = await aiResponse.json();
-    logStep("AI response received");
-
     const content = aiData.choices?.[0]?.message?.content;
+    
     if (!content) {
-      throw new Error("Resposta vazia da IA");
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, "Resposta vazia. Tente novamente.", requestId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Parse JSON from response (handle markdown code blocks)
     let rewriteContent;
     try {
       let jsonStr = content;
-      // Remove markdown code blocks if present
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1].trim();
-      }
+      if (jsonMatch) jsonStr = jsonMatch[1].trim();
       rewriteContent = JSON.parse(jsonStr);
-    } catch (parseError) {
-      logStep("JSON parse error", { error: parseError, content: content.substring(0, 500) });
-      throw new Error("Erro ao processar resposta. Tente novamente.");
+    } catch {
+      secureLog("rewrite-cv", "parse_error", requestId);
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, "Erro ao processar. Tente novamente.", requestId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    logStep("Rewrite content parsed successfully");
-
-    // Save to database
-    const { data: savedRewrite, error: saveError } = await supabaseClient
+    const { data: savedRewrite } = await supabaseClient
       .from("cv_rewrites")
       .insert({
         user_id: user.id,
@@ -174,27 +182,15 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (saveError) {
-      logStep("Save error", { error: saveError });
-      // Continue even if save fails - still return the result
-    } else {
-      logStep("Rewrite saved", { rewriteId: savedRewrite.id });
-    }
+    await supabaseClient.from("credit_transactions").insert({
+      user_id: user.id,
+      type: "consume",
+      amount: 1,
+      feature: "cv_rewrite",
+      description: targetRole ? `Reescrita para: ${targetRole}` : "Reescrita de currículo",
+    });
 
-    // Record credit transaction
-    const { error: transactionError } = await supabaseClient
-      .from("credit_transactions")
-      .insert({
-        user_id: user.id,
-        type: "consume",
-        amount: 1,
-        feature: "cv_rewrite",
-        description: targetRole ? `Reescrita para: ${targetRole}` : "Reescrita de currículo",
-      });
-
-    if (transactionError) {
-      logStep("Transaction error", { error: transactionError });
-    }
+    secureLog("rewrite-cv", "completed", requestId, { rewriteId: savedRewrite?.id });
 
     return new Response(JSON.stringify({
       success: true,
@@ -207,10 +203,11 @@ serve(async (req) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    secureLog("rewrite-cv", "error", requestId, { error: errorMessage });
+    
+    return new Response(
+      JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, ERROR_CODES.INTERNAL_ERROR.message, requestId)),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });

@@ -1,78 +1,80 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import {
+  getCorsHeaders,
+  createSecureError,
+  secureLog,
+  generateRequestId,
+  ERROR_CODES,
+} from "../_shared/security.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const REWRITE_PROMPT = `Você é um especialista em reescrita de currículos otimizados para ATS.
 
-const logStep = (step: string, details?: unknown) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[GENERATE-CV-DOCUMENT] ${step}${detailsStr}`);
-};
+REGRAS:
+1. NÃO INVENTE DADOS - Preserve TODAS as informações reais
+2. NÃO ADICIONE informações que não existem
+3. NÃO OMITA informações importantes
+4. APENAS melhore clareza, impacto e formato ATS
+5. MANTENHA TODAS as experiências profissionais
 
-const REWRITE_PROMPT = `Você é um especialista em reescrita de currículos otimizados para ATS (Applicant Tracking Systems) e recrutadores humanos.
-
-REGRAS ABSOLUTAS:
-1. NÃO INVENTE DADOS - Preserve TODAS as informações reais do currículo original (empresas, datas, cargos, formação, certificações)
-2. NÃO ADICIONE certificações, empresas, cursos ou cargos que não existem no CV original
-3. NÃO OMITA informações importantes do currículo original
-4. APENAS melhore a clareza, impacto, concisão e formato ATS
-5. Para quantificação sem números: use placeholders [X%], [R$X], [N]
-6. MANTENHA TODAS as experiências profissionais listadas no original
-
-DIRETRIZES DE REESCRITA:
-- Use verbos de ação fortes no passado (Liderou, Implementou, Otimizou, Desenvolveu, Reduziu, Aumentou)
-- Foque em resultados e impacto, não apenas responsabilidades
-- Formato: AÇÃO + CONTEXTO + RESULTADO (quando possível)
-- Evite jargões excessivos, mantenha clareza
-- Otimize para ATS: use keywords relevantes para a área/vaga
-- Mantenha bullets concisos (1-2 linhas máximo)
-- Summary: 3-5 linhas impactantes destacando valor único
-- INCLUA TODAS as experiências de trabalho do original
-
-Retorne APENAS um JSON válido com:
+Retorne APENAS JSON:
 {
   "headline": "Título profissional",
   "summary": "Resumo de 3-5 linhas",
-  "experience": [
-    {
-      "company": "Empresa",
-      "role": "Cargo",
-      "date": "Período",
-      "bullets": ["Bullet 1", "Bullet 2", "Bullet 3"]
-    }
-  ],
-  "skills": ["Skill 1", "Skill 2"],
-  "education": "Formação acadêmica completa",
-  "certifications": ["Certificação 1", "Certificação 2"],
-  "languages": ["Idioma 1 - Nível", "Idioma 2 - Nível"]
+  "experience": [{"company": "...", "role": "...", "date": "...", "bullets": ["..."]}],
+  "skills": ["..."],
+  "education": "...",
+  "certifications": ["..."],
+  "languages": ["..."]
 }`;
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  const requestId = generateRequestId();
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    logStep("Function started");
+    secureLog("generate-cv-document", "started", requestId);
 
-    const { resumeText, format, sessionId } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INVALID_INPUT.code, "JSON inválido", requestId)),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { resumeText, format, sessionId } = body;
 
     if (!resumeText || resumeText.trim().length < 100) {
-      throw new Error("Texto do currículo é obrigatório");
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INVALID_INPUT.code, "Texto do currículo muito curto", requestId)),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (!format || !["pdf", "docx"].includes(format)) {
-      throw new Error("Formato deve ser 'pdf' ou 'docx'");
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INVALID_INPUT.code, "Formato deve ser 'pdf' ou 'docx'", requestId)),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    logStep("Request received", { format, hasSessionId: !!sessionId, resumeLength: resumeText.length });
+    secureLog("generate-cv-document", "input_validated", requestId, { format, hasSessionId: !!sessionId });
 
-    // Use Lovable AI Gateway for better reliability
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    logStep("Calling Lovable AI Gateway for rewrite");
+    if (!LOVABLE_API_KEY) {
+      secureLog("generate-cv-document", "missing_api_key", requestId);
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, ERROR_CODES.INTERNAL_ERROR.message, requestId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -86,71 +88,71 @@ serve(async (req) => {
           { role: "system", content: REWRITE_PROMPT },
           { 
             role: "user", 
-            content: `CURRÍCULO ORIGINAL:\n${resumeText}\n\nReescreva seguindo as regras. É FUNDAMENTAL que você inclua TODAS as experiências profissionais listadas no currículo original. Retorne APENAS o JSON.` 
+            content: `CURRÍCULO:\n${resumeText}\n\nInclua TODAS as experiências. Retorne APENAS JSON.` 
           }
         ],
-        temperature: 0.5, // Lower temperature for more consistent output
-        max_tokens: 4000, // Increased for complete CVs
+        temperature: 0.5,
+        max_tokens: 4000,
       }),
     });
 
     if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      logStep("AI Gateway error", { status: aiResponse.status, error: errorText });
+      secureLog("generate-cv-document", "ai_error", requestId, { status: aiResponse.status });
       
       if (aiResponse.status === 429) {
-        throw new Error("Limite de requisições excedido. Tente novamente em alguns minutos.");
+        return new Response(
+          JSON.stringify(createSecureError(ERROR_CODES.RATE_LIMITED.code, ERROR_CODES.RATE_LIMITED.message, requestId)),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-      throw new Error("Erro ao processar currículo. Tente novamente.");
+      
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, "Erro ao processar. Tente novamente.", requestId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const aiData = await aiResponse.json();
     const content = aiData.choices?.[0]?.message?.content;
     
     if (!content) {
-      throw new Error("Resposta vazia da IA");
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, "Resposta vazia. Tente novamente.", requestId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    logStep("AI response received", { responseLength: content.length });
-
-    // Parse JSON from response
     let rewriteContent;
     try {
       let jsonStr = content;
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1].trim();
-      }
+      if (jsonMatch) jsonStr = jsonMatch[1].trim();
       rewriteContent = JSON.parse(jsonStr);
-    } catch (parseError) {
-      logStep("JSON parse error", { error: parseError, contentPreview: content.substring(0, 500) });
-      throw new Error("Erro ao processar resposta. Tente novamente.");
+    } catch {
+      secureLog("generate-cv-document", "parse_error", requestId);
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, "Erro ao processar. Tente novamente.", requestId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Validate required fields
     if (!rewriteContent.headline || !rewriteContent.summary || !rewriteContent.experience) {
-      logStep("Missing required fields", { 
-        hasHeadline: !!rewriteContent.headline,
-        hasSummary: !!rewriteContent.summary,
-        hasExperience: !!rewriteContent.experience
-      });
-      throw new Error("Currículo incompleto. Tente novamente.");
+      secureLog("generate-cv-document", "incomplete_response", requestId);
+      return new Response(
+        JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, "Currículo incompleto. Tente novamente.", requestId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Ensure arrays exist
     rewriteContent.skills = rewriteContent.skills || [];
     rewriteContent.certifications = rewriteContent.certifications || [];
     rewriteContent.languages = rewriteContent.languages || [];
 
-    logStep("Rewrite content validated", { 
-      experienceCount: rewriteContent.experience.length,
-      skillsCount: rewriteContent.skills.length
-    });
-
-    // Generate HTML content for the document
     const htmlContent = generateHTMLContent(rewriteContent);
 
-    logStep("Document generated successfully", { format, htmlLength: htmlContent.length });
+    secureLog("generate-cv-document", "completed", requestId, { 
+      experienceCount: rewriteContent.experience.length 
+    });
 
     return new Response(JSON.stringify({
       success: true,
@@ -164,11 +166,12 @@ serve(async (req) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    secureLog("generate-cv-document", "error", requestId, { error: errorMessage });
+    
+    return new Response(
+      JSON.stringify(createSecureError(ERROR_CODES.INTERNAL_ERROR.code, ERROR_CODES.INTERNAL_ERROR.message, requestId)),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });
 
@@ -182,185 +185,94 @@ interface RewriteContent {
   languages?: string[];
 }
 
+// Enhanced HTML escaping to prevent XSS
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    .replace(/`/g, '&#x60;')
+    .replace(/\//g, '&#x2F;');
+}
+
+// Strip any potentially dangerous patterns
+function sanitizeText(text: string): string {
+  if (!text) return '';
+  return escapeHtml(text)
+    .replace(/javascript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/on\w+\s*=/gi, '');
+}
+
 function generateHTMLContent(content: RewriteContent): string {
   const experienceHTML = content.experience.map(exp => `
     <div class="experience-item">
       <div class="role-line">
-        <strong>${escapeHtml(exp.role)}</strong>
-        <span class="date">${escapeHtml(exp.date)}</span>
+        <strong>${sanitizeText(exp.role)}</strong>
+        <span class="date">${sanitizeText(exp.date)}</span>
       </div>
-      <div class="company">${escapeHtml(exp.company)}</div>
+      <div class="company">${sanitizeText(exp.company)}</div>
       <ul>
-        ${exp.bullets.map(b => `<li>${escapeHtml(b)}</li>`).join('')}
+        ${exp.bullets.map(b => `<li>${sanitizeText(b)}</li>`).join('')}
       </ul>
     </div>
   `).join('');
 
   const certificationsHTML = content.certifications && content.certifications.length > 0 
-    ? `
-      <h2>Certificações</h2>
-      <ul class="certifications">
-        ${content.certifications.map(c => `<li>${escapeHtml(c)}</li>`).join('')}
-      </ul>
-    ` 
+    ? `<h2>Certificações</h2><ul class="certifications">${content.certifications.map(c => `<li>${sanitizeText(c)}</li>`).join('')}</ul>` 
     : '';
 
   const languagesHTML = content.languages && content.languages.length > 0 
-    ? `
-      <h2>Idiomas</h2>
-      <ul class="languages">
-        ${content.languages.map(l => `<li>${escapeHtml(l)}</li>`).join('')}
-      </ul>
-    ` 
+    ? `<h2>Idiomas</h2><ul class="languages">${content.languages.map(l => `<li>${sanitizeText(l)}</li>`).join('')}</ul>` 
     : '';
 
+  // Document-only HTML - no scripts, no event handlers
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
   <title>Currículo Otimizado - CVX</title>
   <style>
-    @media print {
-      body { margin: 0; padding: 20px; }
-      .footer { display: none; }
-    }
+    @media print { body { margin: 0; padding: 20px; } .footer { display: none; } }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      line-height: 1.6; 
-      color: #333; 
-      max-width: 800px; 
-      margin: 0 auto; 
-      padding: 40px 30px;
-      background: #fff;
-    }
-    h1 { 
-      font-size: 26px; 
-      color: #1a1a1a; 
-      margin-bottom: 8px; 
-      border-bottom: 2px solid #0066cc;
-      padding-bottom: 8px;
-    }
-    h2 { 
-      font-size: 13px; 
-      text-transform: uppercase; 
-      letter-spacing: 1px; 
-      color: #0066cc; 
-      border-bottom: 1px solid #0066cc; 
-      padding-bottom: 4px; 
-      margin: 20px 0 10px; 
-    }
-    .summary { 
-      font-size: 14px; 
-      color: #444; 
-      margin-bottom: 16px; 
-      line-height: 1.7;
-      text-align: justify;
-    }
-    .experience-item { 
-      margin-bottom: 16px; 
-      page-break-inside: avoid;
-    }
-    .role-line { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: baseline; 
-      flex-wrap: wrap;
-    }
-    .role-line strong { 
-      font-size: 15px; 
-      color: #1a1a1a;
-    }
-    .date { 
-      font-size: 13px; 
-      color: #666; 
-    }
-    .company { 
-      font-size: 13px; 
-      color: #666; 
-      margin-bottom: 6px; 
-      font-style: italic;
-    }
-    ul { 
-      padding-left: 18px; 
-      margin: 0;
-    }
-    li { 
-      font-size: 13px; 
-      margin-bottom: 3px; 
-      line-height: 1.5;
-    }
-    .skills { 
-      display: flex; 
-      flex-wrap: wrap; 
-      gap: 6px; 
-      list-style: none;
-      padding: 0;
-    }
-    .skill { 
-      background: #f0f7ff; 
-      color: #0066cc; 
-      padding: 4px 10px; 
-      border-radius: 4px; 
-      font-size: 12px;
-      border: 1px solid #cce0ff;
-    }
-    .education { 
-      font-size: 13px; 
-      line-height: 1.6;
-    }
-    .certifications, .languages {
-      list-style: none;
-      padding: 0;
-    }
-    .certifications li, .languages li {
-      font-size: 13px;
-      padding: 2px 0;
-    }
-    .footer { 
-      margin-top: 30px; 
-      padding-top: 15px; 
-      border-top: 1px solid #eee; 
-      text-align: center; 
-      font-size: 10px; 
-      color: #999; 
-    }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 40px 30px; background: #fff; }
+    h1 { font-size: 26px; color: #1a1a1a; margin-bottom: 8px; border-bottom: 2px solid #0066cc; padding-bottom: 8px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #0066cc; border-bottom: 1px solid #0066cc; padding-bottom: 4px; margin: 20px 0 10px; }
+    .summary { font-size: 14px; color: #444; margin-bottom: 16px; line-height: 1.7; text-align: justify; }
+    .experience-item { margin-bottom: 16px; page-break-inside: avoid; }
+    .role-line { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
+    .role-line strong { font-size: 15px; color: #1a1a1a; }
+    .date { font-size: 13px; color: #666; }
+    .company { font-size: 13px; color: #666; margin-bottom: 6px; font-style: italic; }
+    ul { padding-left: 18px; margin: 0; }
+    li { font-size: 13px; margin-bottom: 3px; line-height: 1.5; }
+    .skills { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; }
+    .skill { background: #f0f7ff; color: #0066cc; padding: 4px 10px; border-radius: 4px; font-size: 12px; border: 1px solid #cce0ff; }
+    .education { font-size: 13px; line-height: 1.6; }
+    .certifications, .languages { list-style: none; padding: 0; }
+    .certifications li, .languages li { font-size: 13px; padding: 2px 0; }
+    .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee; text-align: center; font-size: 10px; color: #999; }
   </style>
 </head>
 <body>
-  <h1>${escapeHtml(content.headline)}</h1>
-  
+  <h1>${sanitizeText(content.headline)}</h1>
   <h2>Resumo Profissional</h2>
-  <p class="summary">${escapeHtml(content.summary)}</p>
-  
+  <p class="summary">${sanitizeText(content.summary)}</p>
   <h2>Experiência Profissional</h2>
   ${experienceHTML}
-  
   <h2>Competências</h2>
-  <ul class="skills">
-    ${content.skills.map(s => `<li class="skill">${escapeHtml(s)}</li>`).join('')}
-  </ul>
-  
+  <ul class="skills">${content.skills.map(s => `<li class="skill">${sanitizeText(s)}</li>`).join('')}</ul>
   <h2>Formação Acadêmica</h2>
-  <p class="education">${escapeHtml(content.education)}</p>
-  
+  <p class="education">${sanitizeText(content.education)}</p>
   ${certificationsHTML}
   ${languagesHTML}
-  
-  <div class="footer">
-    Currículo otimizado por CVX - cvxapp.com
-  </div>
+  <div class="footer">Currículo otimizado por CVX - cvxapp.com</div>
 </body>
 </html>`;
-}
-
-function escapeHtml(text: string): string {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
