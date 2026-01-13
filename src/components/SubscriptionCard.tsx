@@ -3,9 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useSecureCheckout } from "@/hooks/useSecureCheckout";
 
 interface SubscriptionInfo {
   subscribed: boolean;
@@ -27,8 +25,7 @@ export const SubscriptionCard = ({
   onGenerateAnalysis,
   isLoading 
 }: SubscriptionCardProps) => {
-  const [isUpgrading, setIsUpgrading] = useState(false);
-  const { toast } = useToast();
+  const { isLoading: isUpgrading, startCheckout } = useSecureCheckout();
   
   const isUnlimited = subscription.analyses_limit >= 999999;
   const usagePercentage = isUnlimited 
@@ -39,25 +36,7 @@ export const SubscriptionCard = ({
                          subscription.product_id === "prod_TY5ZiELFu8XH7y";
 
   const handleUpgrade = async () => {
-    setIsUpgrading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { productType: "avancado" }
-      });
-
-      if (error) throw error;
-      if (!data?.url) throw new Error("Falha ao criar sessão de pagamento");
-
-      window.open(data.url, "_blank");
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpgrading(false);
-    }
+    await startCheckout("avancado");
   };
 
   if (!subscription.subscribed) {
