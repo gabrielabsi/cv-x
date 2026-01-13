@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Crown, Rocket, Check, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useSecureCheckout } from "@/hooks/useSecureCheckout";
 
 interface UpgradeSectionProps {
   currentProductId: string | null;
@@ -64,7 +63,7 @@ const allPlans: UpgradePlan[] = [
 
 export function UpgradeSection({ currentProductId, showAllPlans = false }: UpgradeSectionProps) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { startCheckout } = useSecureCheckout();
 
   // Filter plans based on current subscription
   const availablePlans = allPlans.filter(plan => {
@@ -95,20 +94,7 @@ export function UpgradeSection({ currentProductId, showAllPlans = false }: Upgra
     setLoadingPlan(planId);
     
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { productType: planId }
-      });
-
-      if (error) throw error;
-      if (!data?.url) throw new Error("Falha ao criar sessão de pagamento");
-
-      window.open(data.url, "_blank");
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Tente novamente.",
-        variant: "destructive",
-      });
+      await startCheckout(planId);
     } finally {
       setLoadingPlan(null);
     }

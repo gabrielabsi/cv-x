@@ -1,35 +1,14 @@
-import { useState } from "react";
 import { Users, Clock, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import marcelaPhoto from "@/assets/marcela-absi.jpeg";
+import { useSecureCheckout } from "@/hooks/useSecureCheckout";
 
 export function MentorshipSection() {
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const { isLoading, startCheckout } = useSecureCheckout();
 
   const handlePurchase = async () => {
-    setIsLoading(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { productType: "mentoria" }
-      });
-
-      if (error) throw error;
-      if (!data?.url) throw new Error("Falha ao criar sessão de pagamento");
-
-      window.open(data.url, "_blank");
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Mentoria allows unauthenticated checkout with intent token
+    await startCheckout("mentoria", { requireAuth: false });
   };
 
   return (
