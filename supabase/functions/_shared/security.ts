@@ -87,7 +87,7 @@ export async function hashIdentifier(input: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
 }
 
-// Rate limiting check
+// Rate limiting check with cleanup
 export async function checkRateLimit(
   supabaseClient: SupabaseClient,
   identifier: string,
@@ -96,6 +96,15 @@ export async function checkRateLimit(
   windowMinutes: number
 ): Promise<{ allowed: boolean; remaining: number }> {
   const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
+  
+  // Probabilistic cleanup (1% of requests) to avoid buildup
+  if (Math.random() < 0.01) {
+    try {
+      await supabaseClient.rpc('cleanup_old_security_records');
+    } catch {
+      // Ignore cleanup errors - non-critical
+    }
+  }
   
   // Get current request count
   const { data: existing, error: fetchError } = await supabaseClient
@@ -138,6 +147,35 @@ export async function checkRateLimit(
   }
 
   return { allowed: true, remaining: maxRequests - currentCount - 1 };
+}
+
+// Log security event for audit
+export async function logSecurityEvent(
+  supabaseClient: SupabaseClient,
+  eventType: string,
+  severity: 'info' | 'warning' | 'critical',
+  details: {
+    userId?: string;
+    ipHash?: string;
+    endpoint?: string;
+    requestId?: string;
+    extra?: Record<string, unknown>;
+  }
+): Promise<void> {
+  try {
+    await supabaseClient.from('security_events').insert({
+      event_type: eventType,
+      severity,
+      user_id: details.userId || null,
+      ip_hash: details.ipHash || null,
+      endpoint: details.endpoint || null,
+      request_id: details.requestId || null,
+      details: details.extra || {},
+    });
+  } catch (error) {
+    // Log to console but don't fail the request
+    console.error('Failed to log security event:', error);
+  }
 }
 
 // Validate URL belongs to allowed domains

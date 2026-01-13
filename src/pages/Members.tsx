@@ -43,8 +43,12 @@ interface ExtendedProfile {
   avatar_url: string | null;
   full_name: string | null;
   birth_date: string | null;
-  phone: string | null;
   linkedin_url: string | null;
+}
+
+interface ProfilePrivate {
+  user_id: string;
+  phone: string | null;
 }
 
 interface SubscriptionInfo {
@@ -168,27 +172,40 @@ const Members = () => {
     }
   }, [user]);
 
-  // Load profile
+  // Load profile (public and private data separately)
   useEffect(() => {
     const loadProfile = async () => {
       if (!user) return;
       setIsLoadingProfile(true);
       try {
-        const { data, error } = await supabase
+        // Load public profile data
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
         
-        if (error) throw error;
+        if (profileError) throw profileError;
         
-        if (data) {
-          const extendedProfile = data as unknown as ExtendedProfile;
+        // Load private data (phone) from separate table
+        const { data: privateData, error: privateError } = await supabase
+          .from("profile_private")
+          .select("phone")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        // privateError is ok if no record exists yet
+        if (privateError && privateError.code !== 'PGRST116') {
+          console.error("Error loading private profile:", privateError);
+        }
+        
+        if (profileData) {
+          const extendedProfile = profileData as unknown as ExtendedProfile;
           setProfile(extendedProfile);
           setFormData({
             full_name: extendedProfile.full_name || "",
             birth_date: extendedProfile.birth_date || "",
-            phone: extendedProfile.phone || "",
+            phone: privateData?.phone || "",
             linkedin_url: extendedProfile.linkedin_url || "",
           });
         }
@@ -228,17 +245,27 @@ const Members = () => {
     
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      // Update public profile data
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({
           full_name: formData.full_name || null,
           birth_date: formData.birth_date || null,
-          phone: formData.phone || null,
           linkedin_url: formData.linkedin_url || null,
         })
         .eq("user_id", user.id);
       
-      if (error) throw error;
+      if (profileError) throw profileError;
+      
+      // Update private data (phone) - upsert to handle first-time creation
+      const { error: privateError } = await supabase
+        .from("profile_private")
+        .upsert({
+          user_id: user.id,
+          phone: formData.phone || null,
+        }, { onConflict: 'user_id' });
+      
+      if (privateError) throw privateError;
       
       toast({
         title: "Perfil atualizado",
