@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { 
   Download, 
@@ -7,7 +7,8 @@ import {
   Check,
   Copy,
   ArrowLeft,
-  AlertTriangle
+  AlertTriangle,
+  Printer
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,8 @@ interface RewriteContent {
   experience: Array<{ company: string; role: string; date: string; bullets: string[] }>;
   skills: string[];
   education: string;
+  certifications?: string[];
+  languages?: string[];
 }
 
 // Product IDs for subscription plans that include CV rewrites
@@ -34,6 +37,7 @@ const CVDownload = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const printRef = useRef<HTMLDivElement>(null);
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +46,7 @@ const CVDownload = () => {
   const [format, setFormat] = useState<string>("pdf");
   const [copied, setCopied] = useState(false);
   const [isSubscriber, setIsSubscriber] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const sessionId = searchParams.get("session_id");
   const formatParam = searchParams.get("format");
@@ -94,16 +99,23 @@ const CVDownload = () => {
         if (genError) throw genError;
 
         if (!data?.success || !data?.rewrite) {
-          throw new Error("Erro ao gerar documento");
+          throw new Error(data?.error || "Erro ao gerar documento");
         }
 
-        setRewriteContent(data.rewrite);
+        // Validate the rewrite content
+        const rewrite = data.rewrite;
+        if (!rewrite.headline || !rewrite.summary || !rewrite.experience || rewrite.experience.length === 0) {
+          throw new Error("Currículo gerado está incompleto. Por favor, tente novamente.");
+        }
+
+        setRewriteContent(rewrite);
         setHtmlContent(data.html);
         
         // Clear sessionStorage
         sessionStorage.removeItem("cvx_rewrite_resume");
 
       } catch (err) {
+        console.error("Generate document error:", err);
         setError(err instanceof Error ? err.message : "Erro ao gerar documento");
       } finally {
         setIsLoading(false);
@@ -113,7 +125,58 @@ const CVDownload = () => {
     generateDocument();
   }, [sessionId, format]);
 
-  const handleDownload = (downloadFormat: string) => {
+  const handleDownloadPdf = async () => {
+    if (!htmlContent || !rewriteContent) return;
+
+    setIsGeneratingPdf(true);
+    
+    try {
+      // Dynamic import html2pdf
+      const html2pdf = (await import('html2pdf.js')).default;
+      
+      // Create a temporary container with the HTML content
+      const container = document.createElement('div');
+      container.innerHTML = htmlContent;
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      document.body.appendChild(container);
+
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `curriculo-otimizado-${rewriteContent.headline.replace(/\s+/g, '-').toLowerCase()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait' 
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      await html2pdf().set(opt).from(container).save();
+      
+      document.body.removeChild(container);
+
+      toast({
+        title: "PDF gerado com sucesso!",
+        description: "Seu currículo foi baixado.",
+      });
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      // Fallback to HTML download
+      handleDownloadHtml("pdf");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleDownloadHtml = (downloadFormat: string) => {
     if (!htmlContent) return;
 
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
@@ -130,8 +193,22 @@ const CVDownload = () => {
       title: "Download iniciado!",
       description: downloadFormat === "docx" 
         ? "Abra o arquivo HTML no Word e salve como .docx"
-        : "Abra o arquivo HTML no navegador e salve como PDF (Ctrl+P)",
+        : "Abra o arquivo HTML no navegador e use Ctrl+P para salvar como PDF",
     });
+  };
+
+  const handlePrint = () => {
+    if (!htmlContent) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
   };
 
   const handleCopyAll = async () => {
@@ -169,6 +246,15 @@ const CVDownload = () => {
     });
     text += `COMPETÊNCIAS\n${content.skills.join(" • ")}\n\n`;
     text += `FORMAÇÃO\n${content.education}`;
+    
+    if (content.certifications && content.certifications.length > 0) {
+      text += `\n\nCERTIFICAÇÕES\n${content.certifications.join("\n")}`;
+    }
+    
+    if (content.languages && content.languages.length > 0) {
+      text += `\n\nIDIOMAS\n${content.languages.join("\n")}`;
+    }
+    
     return text;
   };
 
@@ -221,29 +307,45 @@ const CVDownload = () => {
               Currículo Pronto!
             </h1>
             <p className="text-muted-foreground">
-              Seu currículo foi reescrito e otimizado com sucesso.
+              Seu currículo foi reescrito e otimizado para ATS com sucesso.
             </p>
           </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            {/* Subscribers get both buttons */}
             {isSubscriber ? (
               <>
-                <Button variant="hero" className="flex-1" onClick={() => handleDownload("pdf")}>
-                  <Download className="w-5 h-5" />
-                  Baixar PDF
+                <Button 
+                  variant="hero" 
+                  className="flex-1" 
+                  onClick={handleDownloadPdf}
+                  disabled={isGeneratingPdf}
+                >
+                  {isGeneratingPdf ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Download className="w-5 h-5" />
+                  )}
+                  {isGeneratingPdf ? "Gerando..." : "Baixar PDF"}
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={() => handleDownload("docx")}>
+                <Button variant="outline" className="flex-1" onClick={() => handleDownloadHtml("docx")}>
                   <FileText className="w-5 h-5" />
                   Baixar Word
                 </Button>
               </>
             ) : (
-              /* Non-subscribers get only the format they paid for */
-              <Button variant="hero" className="flex-1" onClick={() => handleDownload(format)}>
-                <Download className="w-5 h-5" />
-                Baixar {format === "docx" ? "Word" : "PDF"}
+              <Button 
+                variant="hero" 
+                className="flex-1" 
+                onClick={format === "pdf" ? handleDownloadPdf : () => handleDownloadHtml("docx")}
+                disabled={isGeneratingPdf}
+              >
+                {isGeneratingPdf ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Download className="w-5 h-5" />
+                )}
+                {isGeneratingPdf ? "Gerando..." : `Baixar ${format === "docx" ? "Word" : "PDF"}`}
               </Button>
             )}
             <Button variant="outline" className="flex-1" onClick={handleCopyAll}>
@@ -252,12 +354,20 @@ const CVDownload = () => {
             </Button>
           </div>
 
+          {/* Secondary Actions */}
+          <div className="flex justify-center gap-3 mb-8">
+            <Button variant="ghost" size="sm" onClick={handlePrint}>
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir / Salvar como PDF
+            </Button>
+          </div>
+
           {/* Preview */}
           {rewriteContent && (
-            <div className="p-6 rounded-2xl bg-card border border-border space-y-6">
+            <div ref={printRef} className="p-6 rounded-2xl bg-card border border-border space-y-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <FileText className="w-4 h-4" />
-                Preview do Currículo
+                Preview do Currículo ({rewriteContent.experience.length} experiência(s))
               </div>
 
               {/* Headline */}
@@ -270,7 +380,7 @@ const CVDownload = () => {
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   Resumo Profissional
                 </h3>
-                <p className="text-foreground">{rewriteContent.summary}</p>
+                <p className="text-foreground whitespace-pre-wrap">{rewriteContent.summary}</p>
               </div>
 
               {/* Experience */}
@@ -280,8 +390,8 @@ const CVDownload = () => {
                 </h3>
                 <div className="space-y-4">
                   {rewriteContent.experience.map((exp, index) => (
-                    <div key={index}>
-                      <div className="flex justify-between items-baseline mb-1">
+                    <div key={index} className="pb-4 border-b border-border last:border-0 last:pb-0">
+                      <div className="flex justify-between items-baseline mb-1 flex-wrap gap-2">
                         <span className="font-semibold text-foreground">{exp.role}</span>
                         <span className="text-sm text-muted-foreground">{exp.date}</span>
                       </div>
@@ -289,7 +399,7 @@ const CVDownload = () => {
                       <ul className="space-y-1">
                         {exp.bullets.map((bullet, bIndex) => (
                           <li key={bIndex} className="text-sm text-foreground flex gap-2">
-                            <span className="text-primary">•</span>
+                            <span className="text-primary flex-shrink-0">•</span>
                             <span>{bullet}</span>
                           </li>
                         ))}
@@ -323,25 +433,50 @@ const CVDownload = () => {
                 </h3>
                 <p className="text-foreground">{rewriteContent.education}</p>
               </div>
+
+              {/* Certifications */}
+              {rewriteContent.certifications && rewriteContent.certifications.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Certificações
+                  </h3>
+                  <ul className="space-y-1">
+                    {rewriteContent.certifications.map((cert, index) => (
+                      <li key={index} className="text-sm text-foreground flex gap-2">
+                        <span className="text-accent flex-shrink-0">✓</span>
+                        <span>{cert}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Languages */}
+              {rewriteContent.languages && rewriteContent.languages.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Idiomas
+                  </h3>
+                  <ul className="space-y-1">
+                    {rewriteContent.languages.map((lang, index) => (
+                      <li key={index} className="text-sm text-foreground">{lang}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
           {/* Instructions */}
           <div className="mt-6 p-4 rounded-xl bg-secondary/50 border border-border">
-            <h4 className="font-semibold text-foreground mb-2">Como usar:</h4>
+            <h4 className="font-semibold text-foreground mb-2">Dicas:</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li><strong>Para PDF:</strong></li>
-              <li>1. Clique em "Baixar PDF" para baixar o arquivo HTML</li>
-              <li>2. Abra o arquivo no navegador</li>
-              <li>3. Pressione Ctrl+P (ou Cmd+P no Mac) e salve como PDF</li>
+              <li>• <strong>PDF direto:</strong> Use o botão "Baixar PDF" para gerar automaticamente</li>
+              <li>• <strong>Alternativa:</strong> Clique em "Imprimir" e escolha "Salvar como PDF"</li>
               {(isSubscriber || format === "docx") && (
-                <>
-                  <li className="mt-3"><strong>Para Word:</strong></li>
-                  <li>1. Clique em "Baixar Word" para baixar o arquivo HTML</li>
-                  <li>2. Abra o arquivo no Microsoft Word</li>
-                  <li>3. Salve como .docx (Arquivo → Salvar como → Word)</li>
-                </>
+                <li>• <strong>Word:</strong> Baixe o HTML e abra no Microsoft Word para editar</li>
               )}
+              <li>• <strong>Copiar:</strong> Use "Copiar Tudo" para colar em qualquer editor</li>
             </ul>
           </div>
         </div>
