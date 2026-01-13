@@ -59,6 +59,39 @@ export type Database = {
         }
         Relationships: []
       }
+      checkout_intents: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          intent_token: string
+          ip_hash: string
+          plan_id: string
+          used: boolean
+          user_agent_hash: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          intent_token: string
+          ip_hash: string
+          plan_id: string
+          used?: boolean
+          user_agent_hash: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          intent_token?: string
+          ip_hash?: string
+          plan_id?: string
+          used?: boolean
+          user_agent_hash?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -161,6 +194,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          identifier: string
+          request_count: number
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          identifier: string
+          request_count?: number
+          window_start?: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          identifier?: string
+          request_count?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
       subscription_usage: {
         Row: {
           analyses_limit: number
@@ -211,7 +271,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_old_security_records: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

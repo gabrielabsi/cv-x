@@ -52,3 +52,6 @@ verify_jwt = false
 
 [functions.create-cv-checkout]
 verify_jwt = false
+
+[functions.create-checkout-intent]
+verify_jwt = false
