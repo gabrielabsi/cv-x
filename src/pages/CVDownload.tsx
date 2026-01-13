@@ -46,7 +46,7 @@ const CVDownload = () => {
   const [format, setFormat] = useState<string>("pdf");
   const [copied, setCopied] = useState(false);
   const [isSubscriber, setIsSubscriber] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
 
   const sessionId = searchParams.get("session_id");
   const formatParam = searchParams.get("format");
@@ -125,54 +125,49 @@ const CVDownload = () => {
     generateDocument();
   }, [sessionId, format]);
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = () => {
     if (!htmlContent || !rewriteContent) return;
 
-    setIsGeneratingPdf(true);
-    
-    try {
-      // Dynamic import html2pdf
-      const html2pdf = (await import('html2pdf.js')).default;
+    // Open print dialog - user can save as PDF from browser's print dialog
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      // Enhanced HTML with print-optimized styles
+      const printHtml = htmlContent.replace('</head>', `
+        <style>
+          @media print {
+            @page { 
+              size: A4; 
+              margin: 15mm; 
+            }
+            body { 
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              margin: 0;
+              padding: 0;
+            }
+            .footer { display: none !important; }
+          }
+        </style>
+      </head>`);
       
-      // Create a temporary container with the HTML content
-      const container = document.createElement('div');
-      container.innerHTML = htmlContent;
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.top = '0';
-      document.body.appendChild(container);
-
-      const opt = {
-        margin: [10, 10, 10, 10],
-        filename: `curriculo-otimizado-${rewriteContent.headline.replace(/\s+/g, '-').toLowerCase()}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          letterRendering: true
-        },
-        jsPDF: { 
-          unit: 'mm', 
-          format: 'a4', 
-          orientation: 'portrait' 
-        },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      };
-
-      await html2pdf().set(opt).from(container).save();
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+      printWindow.focus();
       
-      document.body.removeChild(container);
-
+      // Wait for content to load before printing
+      setTimeout(() => {
+        printWindow.print();
+        toast({
+          title: "Janela de impressão aberta",
+          description: "Escolha 'Salvar como PDF' na opção de impressora para baixar o arquivo.",
+        });
+      }, 300);
+    } else {
       toast({
-        title: "PDF gerado com sucesso!",
-        description: "Seu currículo foi baixado.",
+        title: "Erro ao abrir janela",
+        description: "Verifique se o bloqueador de pop-ups está desativado.",
+        variant: "destructive",
       });
-    } catch (err) {
-      console.error("PDF generation error:", err);
-      // Fallback to HTML download
-      handleDownloadHtml("pdf");
-    } finally {
-      setIsGeneratingPdf(false);
     }
   };
 
@@ -319,14 +314,9 @@ const CVDownload = () => {
                   variant="hero" 
                   className="flex-1" 
                   onClick={handleDownloadPdf}
-                  disabled={isGeneratingPdf}
                 >
-                  {isGeneratingPdf ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Download className="w-5 h-5" />
-                  )}
-                  {isGeneratingPdf ? "Gerando..." : "Baixar PDF"}
+                  <Download className="w-5 h-5" />
+                  Baixar PDF
                 </Button>
                 <Button variant="outline" className="flex-1" onClick={() => handleDownloadHtml("docx")}>
                   <FileText className="w-5 h-5" />
@@ -338,14 +328,9 @@ const CVDownload = () => {
                 variant="hero" 
                 className="flex-1" 
                 onClick={format === "pdf" ? handleDownloadPdf : () => handleDownloadHtml("docx")}
-                disabled={isGeneratingPdf}
               >
-                {isGeneratingPdf ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Download className="w-5 h-5" />
-                )}
-                {isGeneratingPdf ? "Gerando..." : `Baixar ${format === "docx" ? "Word" : "PDF"}`}
+                <Download className="w-5 h-5" />
+                {`Baixar ${format === "docx" ? "Word" : "PDF"}`}
               </Button>
             )}
             <Button variant="outline" className="flex-1" onClick={handleCopyAll}>
