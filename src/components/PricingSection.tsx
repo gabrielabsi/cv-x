@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSecureCheckout } from "@/hooks/useSecureCheckout";
+import { CouponInput } from "@/components/CouponInput";
 
 interface Plan {
   id: string;
@@ -74,6 +75,7 @@ const plans: Plan[] = [
 
 export function PricingSection() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
   const { startCheckout } = useSecureCheckout();
@@ -93,7 +95,7 @@ export function PricingSection() {
     setLoadingPlan(planId);
     
     try {
-      await startCheckout(planId);
+      await startCheckout(planId, { couponCode: couponCode || undefined });
     } finally {
       setLoadingPlan(null);
     }
@@ -176,7 +178,15 @@ export function PricingSection() {
         })}
       </div>
 
-      <p className="text-center text-xs text-muted-foreground mt-8">
+      <div className="max-w-md mx-auto mt-8">
+        <CouponInput 
+          value={couponCode} 
+          onChange={setCouponCode} 
+          disabled={!!loadingPlan}
+        />
+      </div>
+
+      <p className="text-center text-xs text-muted-foreground mt-6">
         Cancele a qualquer momento • Pagamento seguro via Stripe
       </p>
     </section>
