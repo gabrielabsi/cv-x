@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Crown, Rocket, Check, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSecureCheckout } from "@/hooks/useSecureCheckout";
+import { CouponInput } from "@/components/CouponInput";
 
 interface UpgradeSectionProps {
   currentProductId: string | null;
@@ -63,6 +64,7 @@ const allPlans: UpgradePlan[] = [
 
 export function UpgradeSection({ currentProductId, showAllPlans = false }: UpgradeSectionProps) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState("");
   const { startCheckout } = useSecureCheckout();
 
   // Filter plans based on current subscription
@@ -94,7 +96,7 @@ export function UpgradeSection({ currentProductId, showAllPlans = false }: Upgra
     setLoadingPlan(planId);
     
     try {
-      await startCheckout(planId);
+      await startCheckout(planId, { couponCode: couponCode || undefined });
     } finally {
       setLoadingPlan(null);
     }
@@ -163,6 +165,14 @@ export function UpgradeSection({ currentProductId, showAllPlans = false }: Upgra
             </div>
           );
         })}
+      </div>
+
+      <div className="max-w-md mx-auto mt-8">
+        <CouponInput 
+          value={couponCode} 
+          onChange={setCouponCode} 
+          disabled={!!loadingPlan}
+        />
       </div>
     </section>
   );

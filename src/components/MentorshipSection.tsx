@@ -1,14 +1,17 @@
+import { useState } from "react";
 import { Users, Clock, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import marcelaPhoto from "@/assets/marcela-absi.jpeg";
 import { useSecureCheckout } from "@/hooks/useSecureCheckout";
+import { CouponInput } from "@/components/CouponInput";
 
 export function MentorshipSection() {
+  const [couponCode, setCouponCode] = useState("");
   const { isLoading, startCheckout } = useSecureCheckout();
 
   const handlePurchase = async () => {
     // Mentoria allows unauthenticated checkout with intent token
-    await startCheckout("mentoria", { requireAuth: false });
+    await startCheckout("mentoria", { requireAuth: false, couponCode: couponCode || undefined });
   };
 
   return (
@@ -95,6 +98,14 @@ export function MentorshipSection() {
                     <p>Via videochamada</p>
                   </div>
                 </div>
+              </div>
+
+              <div className="mb-4">
+                <CouponInput 
+                  value={couponCode} 
+                  onChange={setCouponCode} 
+                  disabled={isLoading}
+                />
               </div>
 
               <Button
