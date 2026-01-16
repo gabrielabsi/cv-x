@@ -5,71 +5,72 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSecureCheckout } from "@/hooks/useSecureCheckout";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { CouponInput } from "@/components/CouponInput";
 
 interface Plan {
   id: string;
-  name: string;
-  price: string;
-  priceValue: number;
-  analyses: string;
+  nameKey: string;
+  pricePT: string;
+  priceEN: string;
+  analysesKey: string;
   icon: React.ElementType;
-  features: string[];
-  highlight?: string;
+  featureKeys: string[];
+  highlightKey?: string;
   popular?: boolean;
 }
 
 const plans: Plan[] = [
   {
     id: "basico",
-    name: "CVX Básico",
-    price: "R$ 16,99",
-    priceValue: 1699,
-    analyses: "1 análise/mês",
+    nameKey: "pricing.basic.name",
+    pricePT: "R$ 16,99",
+    priceEN: "$9.99",
+    analysesKey: "pricing.basic.analyses",
     icon: Zap,
-    features: [
-      "1 análise completa por mês",
-      "Relatório PDF detalhado",
-      "Pontos fortes e fracos",
-      "Palavras-chave faltantes",
-      "Sugestões de melhoria",
+    featureKeys: [
+      "pricing.basic.feature1",
+      "pricing.basic.feature2",
+      "pricing.basic.feature3",
+      "pricing.basic.feature4",
+      "pricing.basic.feature5",
     ],
   },
   {
     id: "intermediario",
-    name: "CVX Intermediário",
-    price: "R$ 24,99",
-    priceValue: 2499,
-    analyses: "10 análises/mês",
+    nameKey: "pricing.intermediate.name",
+    pricePT: "R$ 24,99",
+    priceEN: "$14.99",
+    analysesKey: "pricing.intermediate.analyses",
     icon: Crown,
-    features: [
-      "10 análises completas por mês",
-      "4 currículos reescritos por mês",
-      "Relatório PDF detalhado",
-      "Pontos fortes e fracos",
-      "Palavras-chave faltantes",
-      "Sugestões de melhoria",
+    featureKeys: [
+      "pricing.intermediate.feature1",
+      "pricing.intermediate.feature2",
+      "pricing.intermediate.feature3",
+      "pricing.intermediate.feature4",
+      "pricing.intermediate.feature5",
+      "pricing.intermediate.feature6",
     ],
-    highlight: "🎓 Mentoria por R$ 299/ano (valor promocional)",
+    highlightKey: "pricing.intermediate.highlight",
     popular: true,
   },
   {
     id: "avancado",
-    name: "CVX Avançado",
-    price: "R$ 49,99",
-    priceValue: 4999,
-    analyses: "Ilimitado",
+    nameKey: "pricing.advanced.name",
+    pricePT: "R$ 49,99",
+    priceEN: "$29.99",
+    analysesKey: "pricing.advanced.analyses",
     icon: Rocket,
-    features: [
-      "Análises ilimitadas",
-      "Currículos reescritos ilimitados",
-      "Relatório PDF detalhado",
-      "Pontos fortes e fracos",
-      "Palavras-chave faltantes",
-      "Sugestões de melhoria",
-      "Acesso antecipado a novidades",
+    featureKeys: [
+      "pricing.advanced.feature1",
+      "pricing.advanced.feature2",
+      "pricing.advanced.feature3",
+      "pricing.advanced.feature4",
+      "pricing.advanced.feature5",
+      "pricing.advanced.feature6",
+      "pricing.advanced.feature7",
     ],
-    highlight: "🎓 Mentoria por R$ 199/ano (valor especial)",
+    highlightKey: "pricing.advanced.highlight",
   },
 ];
 
@@ -79,14 +80,15 @@ export function PricingSection() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { startCheckout } = useSecureCheckout();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubscribe = async (planId: string) => {
     // Require login before purchase
     if (!user) {
       toast({
-        title: "Login necessário",
-        description: "Faça login ou crie uma conta para assinar um plano.",
+        title: t("auth.loginRequired"),
+        description: t("auth.loginRequiredDesc"),
       });
       navigate("/auth?redirect=/");
       return;
@@ -95,7 +97,9 @@ export function PricingSection() {
     setLoadingPlan(planId);
     
     try {
-      await startCheckout(planId, { couponCode: couponCode || undefined });
+      // Use language-specific plan IDs for checkout
+      const checkoutPlanId = language === "en" ? `${planId}_en` : planId;
+      await startCheckout(checkoutPlanId, { couponCode: couponCode || undefined });
     } finally {
       setLoadingPlan(null);
     }
@@ -105,11 +109,10 @@ export function PricingSection() {
     <section className="py-20 relative">
       <div className="text-center mb-12">
         <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground mb-4">
-          Planos de Assinatura
+          {t("pricing.title")}
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Escolha o plano ideal para suas necessidades e tenha análises completas 
-          com relatório PDF detalhado todo mês.
+          {t("pricing.subtitle")}
         </p>
       </div>
 
@@ -117,6 +120,7 @@ export function PricingSection() {
         {plans.map((plan) => {
           const Icon = plan.icon;
           const isLoading = loadingPlan === plan.id;
+          const price = language === "en" ? plan.priceEN : plan.pricePT;
           
           return (
             <div
@@ -129,7 +133,7 @@ export function PricingSection() {
             >
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-primary text-primary-foreground text-xs font-semibold">
-                  Mais Popular
+                  {t("pricing.popular")}
                 </div>
               )}
 
@@ -140,27 +144,27 @@ export function PricingSection() {
                   <Icon className={`w-5 h-5 ${plan.popular ? "text-primary" : "text-muted-foreground"}`} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">{plan.name}</h3>
-                  <p className="text-xs text-muted-foreground">{plan.analyses}</p>
+                  <h3 className="font-semibold text-foreground">{t(plan.nameKey)}</h3>
+                  <p className="text-xs text-muted-foreground">{t(plan.analysesKey)}</p>
                 </div>
               </div>
 
               <div className="mb-6">
-                <span className="text-3xl font-bold font-display text-foreground">{plan.price}</span>
-                <span className="text-muted-foreground">/mês</span>
+                <span className="text-3xl font-bold font-display text-foreground">{price}</span>
+                <span className="text-muted-foreground">{t("pricing.perMonth")}</span>
               </div>
 
-              {plan.highlight && (
+              {plan.highlightKey && (
                 <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                  <p className="text-sm font-medium text-primary">{plan.highlight}</p>
+                  <p className="text-sm font-medium text-primary">{t(plan.highlightKey)}</p>
                 </div>
               )}
 
               <ul className="space-y-3 mb-6">
-                {plan.features.map((feature, i) => (
+                {plan.featureKeys.map((featureKey, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
                     <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span className="text-muted-foreground">{feature}</span>
+                    <span className="text-muted-foreground">{t(featureKey)}</span>
                   </li>
                 ))}
               </ul>
@@ -171,7 +175,7 @@ export function PricingSection() {
                 onClick={() => handleSubscribe(plan.id)}
                 disabled={isLoading}
               >
-                {isLoading ? "Aguarde..." : "Assinar Agora"}
+                {isLoading ? t("pricing.loading") : t("pricing.subscribe")}
               </Button>
             </div>
           );
@@ -187,7 +191,7 @@ export function PricingSection() {
       </div>
 
       <p className="text-center text-xs text-muted-foreground mt-6">
-        Cancele a qualquer momento • Pagamento seguro via Stripe
+        {t("pricing.cancel")}
       </p>
     </section>
   );
