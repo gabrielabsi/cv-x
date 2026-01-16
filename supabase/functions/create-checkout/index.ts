@@ -14,14 +14,31 @@ import {
   ERROR_CODES,
 } from "../_shared/security.ts";
 
-// Price IDs for different products (server-side allowlist)
-const PRICE_IDS: Record<string, string> = {
+// Price IDs for different products - Portuguese (BRL)
+const PRICE_IDS_PT: Record<string, string> = {
   premium_single: "price_1SadsnJmb1TyvE3zq8Mslx2G",
   basico: "price_1SazNiJmb1TyvE3zbLklgJmP",
   intermediario: "price_1SazNxJmb1TyvE3z9L6ywLLz",
   avancado: "price_1SazOBJmb1TyvE3zJUHhdhIQ",
   mentoria: "price_1ScVDFJmb1TyvE3zlpLOc3I8",
 };
+
+// Price IDs for different products - English (USD)
+const PRICE_IDS_EN: Record<string, string> = {
+  basico: "price_1SqBuRJmb1TyvE3zHnRPacyl",      // CVX Basic - $9.99/month
+  intermediario: "price_1SqBuQJmb1TyvE3zqgGEu6j1", // CVX Intermediate - $14.99/month
+  avancado: "price_1SqBuPJmb1TyvE3zrA33BZ7j",    // CVX Advanced - $29.99/month
+  mentoria: "price_1SqBuJJmb1TyvE3zKLCfFsCS",    // Cela Mentorship - $99
+  rewrite_pdf: "price_1SqBuUJmb1TyvE3z8JgSMBQ0", // Rewrite PDF - $1.99
+  rewrite_word: "price_1SqBuTJmb1TyvE3zK23Wwggj", // Rewrite Word - $4.99
+  premium_analysis: "price_1SqBuVJmb1TyvE3ziyY5bF0a", // Premium Analysis - $4.99
+};
+
+// All valid price IDs (server-side allowlist for security)
+const ALL_VALID_PRICE_IDS = new Set([
+  ...Object.values(PRICE_IDS_PT),
+  ...Object.values(PRICE_IDS_EN),
+]);
 
 // Coupon IDs - normalized to uppercase for case-insensitive matching
 const COUPON_IDS: Record<string, string> = {
@@ -104,7 +121,7 @@ serve(async (req) => {
       );
     }
 
-    const { productType = "premium_single", couponCode, intentToken } = body;
+    const { productType = "premium_single", couponCode, intentToken, priceId: clientPriceId, language = "pt" } = body;
 
     // Authentication: require either JWT or valid intent token
     const authHeader = req.headers.get("Authorization");
@@ -214,8 +231,19 @@ serve(async (req) => {
       secureLog("create-checkout", "intent_validated", requestId, { jti: tokenPayload.jti });
     }
 
-    // Validate product type is in allowlist
-    const priceId = PRICE_IDS[productType];
+    // Determine price ID: use client-provided priceId if valid, otherwise lookup from language-specific map
+    let priceId: string | undefined;
+    
+    if (clientPriceId && ALL_VALID_PRICE_IDS.has(clientPriceId)) {
+      // Client sent a valid price ID directly
+      priceId = clientPriceId;
+      secureLog("create-checkout", "using_client_price_id", requestId, { priceId, language });
+    } else {
+      // Fallback to server-side lookup based on product type and language
+      const priceMap = language === "en" ? PRICE_IDS_EN : PRICE_IDS_PT;
+      priceId = priceMap[productType];
+    }
+    
     if (!priceId) {
       return new Response(
         JSON.stringify(createSecureError(ERROR_CODES.INVALID_INPUT.code, "Produto inválido", requestId)),

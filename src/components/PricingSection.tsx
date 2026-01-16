@@ -97,9 +97,8 @@ export function PricingSection() {
     setLoadingPlan(planId);
     
     try {
-      // Use language-specific plan IDs for checkout
-      const checkoutPlanId = language === "en" ? `${planId}_en` : planId;
-      await startCheckout(checkoutPlanId, { couponCode: couponCode || undefined });
+      // The hook now handles language-specific price IDs internally
+      await startCheckout(planId, { couponCode: couponCode || undefined });
     } finally {
       setLoadingPlan(null);
     }

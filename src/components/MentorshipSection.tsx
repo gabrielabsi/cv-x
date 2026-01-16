@@ -12,9 +12,8 @@ export function MentorshipSection() {
   const { t, language } = useLanguage();
 
   const handlePurchase = async () => {
-    // Use language-specific mentorship product
-    const productId = language === "en" ? "mentoria_en" : "mentoria";
-    await startCheckout(productId, { requireAuth: false, couponCode: couponCode || undefined });
+    // The hook now handles language-specific price IDs internally
+    await startCheckout("mentoria", { requireAuth: false, couponCode: couponCode || undefined });
   };
 
   const pricePT = { original: "R$ 499", current: "R$ 299" };

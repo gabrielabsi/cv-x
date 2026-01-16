@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tag, X, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CouponInputProps {
   value: string;
@@ -12,6 +13,7 @@ interface CouponInputProps {
 export function CouponInput({ value, onChange, disabled }: CouponInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
+  const { t } = useLanguage();
 
   const handleApply = () => {
     onChange(inputValue.trim().toUpperCase());
@@ -42,7 +44,7 @@ export function CouponInput({ value, onChange, disabled }: CouponInputProps) {
           onClick={handleClear}
           disabled={disabled}
           className="p-1 rounded hover:bg-primary/20 transition-colors"
-          aria-label="Remover cupom"
+          aria-label={t("coupon.remove")}
         >
           <X className="w-4 h-4 text-primary" />
         </button>
@@ -59,7 +61,7 @@ export function CouponInput({ value, onChange, disabled }: CouponInputProps) {
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
       >
         <Tag className="w-4 h-4" />
-        <span>Adicionar cupom de desconto</span>
+        <span>{t("coupon.add")}</span>
       </button>
     );
   }
@@ -68,7 +70,7 @@ export function CouponInput({ value, onChange, disabled }: CouponInputProps) {
     <div className="flex gap-2">
       <Input
         type="text"
-        placeholder="Digite o código do cupom"
+        placeholder={t("coupon.placeholder")}
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value.toUpperCase())}
         onKeyDown={handleKeyDown}
