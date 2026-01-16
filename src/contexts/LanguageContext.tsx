@@ -161,8 +161,17 @@ const translations: Record<Language, Record<string, string>> = {
     "flow.analysisError": "Erro na análise",
 
     // Coupon
-    "coupon.placeholder": "Cupom de desconto (opcional)",
+    "coupon.placeholder": "Digite o código do cupom",
     "coupon.apply": "Aplicar",
+    "coupon.add": "Adicionar cupom de desconto",
+    "coupon.remove": "Remover cupom",
+
+    // Checkout
+    "checkout.error": "Erro ao criar sessão de pagamento",
+    "checkout.retryError": "Não foi possível iniciar o checkout. Tente novamente.",
+    "checkout.loginRequired": "Login necessário para continuar",
+    "checkout.invalidProduct": "Produto inválido",
+    "checkout.errorTitle": "Erro",
     
     // Contact
     "contact.title": "Dúvidas ou sugestões?",
@@ -320,8 +329,17 @@ const translations: Record<Language, Record<string, string>> = {
     "flow.analysisError": "Analysis error",
 
     // Coupon
-    "coupon.placeholder": "Discount coupon (optional)",
+    "coupon.placeholder": "Enter coupon code",
     "coupon.apply": "Apply",
+    "coupon.add": "Add discount coupon",
+    "coupon.remove": "Remove coupon",
+
+    // Checkout
+    "checkout.error": "Error creating payment session",
+    "checkout.retryError": "Could not start checkout. Please try again.",
+    "checkout.loginRequired": "Login required to continue",
+    "checkout.invalidProduct": "Invalid product",
+    "checkout.errorTitle": "Error",
 
     // Contact
     "contact.title": "Questions or suggestions?",
