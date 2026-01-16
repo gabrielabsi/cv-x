@@ -3,29 +3,36 @@ import { Users, Clock, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import marcelaPhoto from "@/assets/marcela-absi.jpeg";
 import { useSecureCheckout } from "@/hooks/useSecureCheckout";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { CouponInput } from "@/components/CouponInput";
 
 export function MentorshipSection() {
   const [couponCode, setCouponCode] = useState("");
   const { isLoading, startCheckout } = useSecureCheckout();
+  const { t, language } = useLanguage();
 
   const handlePurchase = async () => {
-    // Mentoria allows unauthenticated checkout with intent token
-    await startCheckout("mentoria", { requireAuth: false, couponCode: couponCode || undefined });
+    // Use language-specific mentorship product
+    const productId = language === "en" ? "mentoria_en" : "mentoria";
+    await startCheckout(productId, { requireAuth: false, couponCode: couponCode || undefined });
   };
+
+  const pricePT = { original: "R$ 499", current: "R$ 299" };
+  const priceEN = { original: "$149", current: "$99" };
+  const price = language === "en" ? priceEN : pricePT;
 
   return (
     <section className="py-16 relative">
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-6">
           <Users className="w-4 h-4 text-accent" />
-          <span className="text-sm font-medium text-accent">Mentoria Exclusiva</span>
+          <span className="text-sm font-medium text-accent">{t("mentorship.badge")}</span>
         </div>
         <h2 className="text-3xl md:text-4xl font-bold font-display text-foreground mb-4">
-          Mentoria com Especialista em Carreira
+          {t("mentorship.title")}
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Acelere sua transição de carreira com orientação personalizada de uma especialista.
+          {t("mentorship.subtitle")}
         </p>
       </div>
 
@@ -41,7 +48,7 @@ export function MentorshipSection() {
                 <div className="w-72 h-72 md:w-80 md:h-80 rounded-2xl overflow-hidden border-2 border-accent/30 shadow-lg mx-auto md:mx-0">
                   <img 
                     src={marcelaPhoto} 
-                    alt="Marcela Absi - Mentora de Carreira" 
+                    alt="Marcela Absi - Career Mentor" 
                     className="w-full h-full object-cover object-top"
                   />
                 </div>
@@ -50,52 +57,44 @@ export function MentorshipSection() {
                 </div>
               </div>
               
-              <h3 className="text-2xl font-bold font-display text-foreground mb-2">Marcela Absi</h3>
-              <p className="text-accent font-medium mb-4">Psicóloga & Mentora de Carreira</p>
+              <h3 className="text-2xl font-bold font-display text-foreground mb-2">{t("mentorship.name")}</h3>
+              <p className="text-accent font-medium mb-4">{t("mentorship.role")}</p>
               
               <div className="flex items-center justify-center md:justify-start gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  <span>1 hora</span>
+                  <span>{t("mentorship.duration")}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
-                  <span>Online</span>
+                  <span>{t("mentorship.format")}</span>
                 </div>
               </div>
             </div>
 
             {/* About & CTA */}
             <div>
-              <h4 className="text-lg font-semibold text-foreground mb-4">Sobre Marcela Absi</h4>
+              <h4 className="text-lg font-semibold text-foreground mb-4">{t("mentorship.about")}</h4>
               <div className="space-y-4 text-muted-foreground mb-6">
-                <p>
-                  Sou psicóloga com mais de 10 anos de experiência em gestão de pessoas e desenvolvimento profissional.
-                </p>
-                <p>
-                  Tenho vivência também como empreendedora no varejo, o que me proporcionou uma visão prática do mercado.
-                </p>
-                <p>
-                  Eu passei por isso. Sei o que é sentir que perdeu sua identidade profissional depois da maternidade. Sei o que é ter medo de recomeçar. E sei também que é possível se reencontrar.
-                </p>
-                <p>
-                  Hoje utilizo esse conhecimento e vivência para orientar profissionais na construção de carreiras mais alinhadas com seus propósitos e objetivos.
-                </p>
+                <p>{t("mentorship.bio1")}</p>
+                <p>{t("mentorship.bio2")}</p>
+                <p>{t("mentorship.bio3")}</p>
+                <p>{t("mentorship.bio4")}</p>
               </div>
 
               <div className="p-4 rounded-xl bg-secondary/50 border border-border mb-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Mentoria Individual</p>
+                    <p className="text-sm text-muted-foreground">{t("mentorship.sessionType")}</p>
                     <div className="flex items-center gap-3">
-                      <p className="text-lg text-muted-foreground line-through decoration-destructive decoration-2">R$ 499</p>
-                      <p className="text-2xl font-bold font-display text-foreground">R$ 299</p>
+                      <p className="text-lg text-muted-foreground line-through decoration-destructive decoration-2">{price.original}</p>
+                      <p className="text-2xl font-bold font-display text-foreground">{price.current}</p>
                     </div>
-                    <p className="text-xs text-accent font-medium mt-1">🚀 Promoção de Lançamento - Por tempo limitado!</p>
+                    <p className="text-xs text-accent font-medium mt-1">{t("mentorship.promo")}</p>
                   </div>
                   <div className="text-right text-xs text-muted-foreground">
-                    <p>Sessão de 1 hora</p>
-                    <p>Via videochamada</p>
+                    <p>{t("mentorship.sessionDetails1")}</p>
+                    <p>{t("mentorship.sessionDetails2")}</p>
                   </div>
                 </div>
               </div>
@@ -114,7 +113,7 @@ export function MentorshipSection() {
                 onClick={handlePurchase}
                 disabled={isLoading}
               >
-                {isLoading ? "Aguarde..." : "Agendar Mentoria"}
+                {isLoading ? t("mentorship.loading") : t("mentorship.cta")}
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>

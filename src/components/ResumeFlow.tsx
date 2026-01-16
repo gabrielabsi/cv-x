@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ResumeInput } from "@/components/ResumeInput";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { extractTextFromFile } from "@/lib/analysis";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,12 +44,13 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const { toast } = useToast();
+  const { t, language } = useLanguage();
 
   const handleImportResume = async () => {
     if (!selectedFile && !linkedInUrl.trim() && !linkedInProfileData.trim()) {
       toast({
-        title: "Currículo obrigatório",
-        description: "Envie um arquivo PDF/DOCX ou conecte seu LinkedIn.",
+        title: t("flow.requiredResume"),
+        description: t("flow.requiredResumeDesc"),
         variant: "destructive",
       });
       return;
@@ -62,15 +64,15 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
       }
 
       if (!text || text.trim().length < 100) {
-        throw new Error("Não foi possível extrair texto suficiente do currículo.");
+        throw new Error(t("flow.notEnoughText"));
       }
 
       setResumeText(text);
       setStep("choose");
     } catch (error) {
       toast({
-        title: "Erro ao importar",
-        description: error instanceof Error ? error.message : "Tente novamente.",
+        title: t("flow.importError"),
+        description: error instanceof Error ? error.message : "Try again.",
         variant: "destructive",
       });
     } finally {
@@ -92,7 +94,7 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
       if (error) throw error;
 
       if (!data?.improvements) {
-        throw new Error("Erro ao analisar melhorias");
+        throw new Error(t("flow.analysisError"));
       }
 
       setImprovements(data.improvements);
@@ -101,8 +103,8 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
       setStep("improvements");
     } catch (error) {
       toast({
-        title: "Erro na análise",
-        description: error instanceof Error ? error.message : "Tente novamente.",
+        title: t("flow.analysisError"),
+        description: error instanceof Error ? error.message : "Try again.",
         variant: "destructive",
       });
     } finally {
@@ -113,8 +115,8 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
   const handleCompareSubmit = () => {
     if (!jobDescription.trim() || jobDescription.trim().length < 50) {
       toast({
-        title: "Descrição da vaga obrigatória",
-        description: "Cole a descrição completa da vaga (mínimo 50 caracteres).",
+        title: t("flow.jobRequired"),
+        description: t("flow.jobRequiredDesc"),
         variant: "destructive",
       });
       return;
@@ -135,14 +137,14 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
       if (error) throw error;
 
       if (!data?.url) {
-        throw new Error("Falha ao criar sessão de pagamento");
+        throw new Error(t("flow.checkoutError"));
       }
 
       window.location.href = data.url;
     } catch (error) {
       toast({
-        title: "Erro no checkout",
-        description: error instanceof Error ? error.message : "Tente novamente.",
+        title: t("flow.checkoutError"),
+        description: error instanceof Error ? error.message : "Try again.",
         variant: "destructive",
       });
     } finally {
@@ -163,6 +165,10 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
     return "text-destructive";
   };
 
+  // Prices based on language
+  const pdfPrice = language === "en" ? "$1.99" : "R$ 4,99";
+  const wordPrice = language === "en" ? "$4.99" : "R$ 9,99";
+
   // Step 1: Upload Resume
   if (step === "upload") {
     return (
@@ -170,7 +176,7 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
         <div>
           <Label className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
             <span className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">1</span>
-            Importe seu Currículo
+            {t("flow.step1")}
           </Label>
           <ResumeInput
             selectedFile={selectedFile}
@@ -193,7 +199,7 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
           ) : (
             <>
               <FileText className="w-5 h-5" />
-              Importar Currículo
+              {t("flow.importButton")}
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </>
           )}
@@ -211,10 +217,10 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
             <Check className="w-8 h-8 text-accent" />
           </div>
           <h3 className="text-xl font-bold text-foreground mb-2">
-            Currículo Importado!
+            {t("flow.imported")}
           </h3>
           <p className="text-muted-foreground">
-            O que você gostaria de fazer?
+            {t("flow.whatToDo")}
           </p>
         </div>
 
@@ -230,10 +236,10 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
             </div>
             <div>
               <div className="font-semibold text-foreground mb-1">
-                Comparar com uma Vaga
+                {t("flow.compareTitle")}
               </div>
               <div className="text-sm text-muted-foreground">
-                Analise seu fit com uma vaga específica e receba score de compatibilidade
+                {t("flow.compareDesc")}
               </div>
             </div>
           </Button>
@@ -255,20 +261,20 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
             )}
             <div>
               <div className="font-semibold text-foreground mb-1 flex items-center gap-2">
-                Reescrever Currículo
+                {t("flow.rewriteTitle")}
                 <span className="px-2 py-0.5 text-xs rounded-full bg-accent/20 text-accent">
-                  Premium
+                  {t("flow.premium")}
                 </span>
               </div>
               <div className="text-sm text-muted-foreground">
-                Otimize seu currículo para ATS e recrutadores com nossa IA
+                {t("flow.rewriteDesc")}
               </div>
             </div>
           </Button>
         </div>
 
         <Button variant="ghost" className="w-full" onClick={handleBack}>
-          ← Voltar
+          {t("flow.back")}
         </Button>
       </div>
     );
@@ -281,14 +287,14 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
         <div>
           <Label className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
             <span className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">2</span>
-            Descrição da Vaga
+            {t("flow.step2")}
           </Label>
           <div className="relative group">
             <div className="absolute left-4 top-4 w-5 h-5 rounded bg-accent/20 flex items-center justify-center">
               <FileText className="w-3 h-3 text-accent" />
             </div>
             <Textarea
-              placeholder="Cole aqui a descrição completa da vaga (requisitos, responsabilidades, qualificações...)"
+              placeholder={t("flow.jobPlaceholder")}
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
               className="pl-12 min-h-[150px] bg-secondary/50 border-border focus:border-primary focus:ring-primary/20 transition-all resize-none"
@@ -296,7 +302,7 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
             />
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Copie e cole a descrição completa da vaga para uma análise mais precisa
+            {t("flow.jobHint")}
           </p>
         </div>
 
@@ -311,14 +317,14 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
           ) : (
             <>
               <TrendingUp className="w-5 h-5" />
-              Analisar Compatibilidade
+              {t("flow.analyze")}
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </>
           )}
         </Button>
 
         <Button variant="ghost" className="w-full" onClick={handleBack}>
-          ← Voltar
+          {t("flow.back")}
         </Button>
       </div>
     );
@@ -340,7 +346,7 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
         <div className="space-y-3">
           <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-yellow-500" />
-            3 Pontos Principais de Melhoria
+            {t("flow.improvements")}
           </h4>
           {improvements.map((improvement, index) => (
             <div key={index} className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
@@ -358,10 +364,10 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
         <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 via-accent/5 to-transparent border border-primary/30">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h4 className="font-semibold text-foreground">Versão Otimizada Completa</h4>
+            <h4 className="font-semibold text-foreground">{t("flow.optimizedVersion")}</h4>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Receba seu currículo reescrito com todas as melhorias aplicadas, pronto para usar.
+            {t("flow.optimizedDesc")}
           </p>
 
           <div className="grid gap-3">
@@ -374,11 +380,11 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
               <div className="flex items-center gap-3">
                 <Download className="w-5 h-5 text-primary" />
                 <div className="text-left">
-                  <div className="font-semibold">Baixar em PDF</div>
-                  <div className="text-xs text-muted-foreground">Pronto para enviar</div>
+                  <div className="font-semibold">{t("flow.downloadPdf")}</div>
+                  <div className="text-xs text-muted-foreground">{t("flow.pdfDesc")}</div>
                 </div>
               </div>
-              <div className="text-lg font-bold text-primary">R$ 4,99</div>
+              <div className="text-lg font-bold text-primary">{pdfPrice}</div>
             </Button>
 
             <Button
@@ -390,24 +396,24 @@ export const ResumeFlow = ({ onAnalyze, isLoading }: ResumeFlowProps) => {
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5" />
                 <div className="text-left">
-                  <div className="font-semibold">Baixar em Word</div>
-                  <div className="text-xs opacity-80">Editável + PDF incluso</div>
+                  <div className="font-semibold">{t("flow.downloadWord")}</div>
+                  <div className="text-xs opacity-80">{t("flow.wordDesc")}</div>
                 </div>
               </div>
-              <div className="text-lg font-bold">R$ 9,99</div>
+              <div className="text-lg font-bold">{wordPrice}</div>
             </Button>
           </div>
 
           {isCheckingOut && (
             <div className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Redirecionando para pagamento...
+              {t("flow.redirecting")}
             </div>
           )}
         </div>
 
         <Button variant="ghost" className="w-full" onClick={handleBack}>
-          ← Começar novamente
+          {t("flow.startOver")}
         </Button>
       </div>
     );
