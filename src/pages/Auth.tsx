@@ -7,19 +7,22 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { z } from "zod";
 import cvxLogo from "@/assets/cvx-logo.png";
 
-const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
-});
-
-const signUpSchema = loginSchema.extend({
-  displayName: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-});
-
 const Auth = () => {
+  const { t } = useLanguage();
+  
+  const loginSchema = z.object({
+    email: z.string().email(t("authPage.invalidEmail")),
+    password: z.string().min(6, t("authPage.passwordMin")),
+  });
+
+  const signUpSchema = loginSchema.extend({
+    displayName: z.string().min(2, t("authPage.nameMin")),
+  });
+
   const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,16 +44,16 @@ const Auth = () => {
       });
       if (error) {
         toast({
-          title: "Erro ao entrar com Google",
+          title: t("authPage.googleError"),
           description: error.message,
           variant: "destructive",
         });
       }
     } catch (err) {
-      console.error("Erro ao iniciar login com Google:", err);
+      console.error("Error starting Google login:", err);
       toast({
-        title: "Erro inesperado",
-        description: "Não foi possível conectar com o Google.",
+        title: t("authPage.unexpectedError"),
+        description: t("authPage.googleConnectError"),
         variant: "destructive",
       });
     } finally {
@@ -73,7 +76,7 @@ const Auth = () => {
         const validation = loginSchema.safeParse({ email, password });
         if (!validation.success) {
           toast({
-            title: "Dados inválidos",
+            title: t("authPage.invalidData"),
             description: validation.error.errors[0].message,
             variant: "destructive",
           });
@@ -85,10 +88,10 @@ const Auth = () => {
         if (error) {
           let message = error.message;
           if (message.includes("Invalid login credentials")) {
-            message = "Email ou senha incorretos";
+            message = t("authPage.invalidCredentials");
           }
           toast({
-            title: "Erro ao entrar",
+            title: t("authPage.loginError"),
             description: message,
             variant: "destructive",
           });
@@ -97,7 +100,7 @@ const Auth = () => {
         const validation = signUpSchema.safeParse({ email, password, displayName });
         if (!validation.success) {
           toast({
-            title: "Dados inválidos",
+            title: t("authPage.invalidData"),
             description: validation.error.errors[0].message,
             variant: "destructive",
           });
@@ -109,25 +112,25 @@ const Auth = () => {
         if (error) {
           let message = error.message;
           if (message.includes("already registered")) {
-            message = "Este email já está cadastrado";
+            message = t("authPage.emailRegistered");
           }
           toast({
-            title: "Erro ao criar conta",
+            title: t("authPage.signupError"),
             description: message,
             variant: "destructive",
           });
         } else {
           toast({
-            title: "Conta criada!",
-            description: "Você já pode começar a usar.",
+            title: t("authPage.accountCreated"),
+            description: t("authPage.startUsing"),
           });
         }
       } else if (mode === "reset") {
-        const emailValidation = z.string().email("Email inválido").safeParse(email);
+        const emailValidation = z.string().email(t("authPage.invalidEmail")).safeParse(email);
         if (!emailValidation.success) {
           toast({
-            title: "Dados inválidos",
-            description: "Por favor, insira um email válido.",
+            title: t("authPage.invalidData"),
+            description: t("authPage.validEmail"),
             variant: "destructive",
           });
           setIsLoading(false);
@@ -140,14 +143,14 @@ const Auth = () => {
 
         if (error) {
           toast({
-            title: "Erro ao enviar email",
+            title: t("authPage.emailError"),
             description: error.message,
             variant: "destructive",
           });
         } else {
           toast({
-            title: "Email enviado!",
-            description: "Verifique sua caixa de entrada para redefinir sua senha.",
+            title: t("authPage.emailSent"),
+            description: t("authPage.checkInbox"),
           });
           setMode("login");
         }
@@ -181,31 +184,31 @@ const Auth = () => {
               className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
             >
               <ArrowLeft className="w-4 h-4" />
-              Voltar ao login
+              {t("authPage.backToLogin")}
             </button>
           )}
           
           <h1 className="text-2xl font-bold text-center text-foreground mb-2">
-            {mode === "login" && "Bem-vindo de volta!"}
-            {mode === "signup" && "Crie sua conta"}
-            {mode === "reset" && "Recuperar senha"}
+            {mode === "login" && t("authPage.welcomeBack")}
+            {mode === "signup" && t("authPage.createAccount")}
+            {mode === "reset" && t("authPage.resetPassword")}
           </h1>
           <p className="text-center text-muted-foreground mb-6">
-            {mode === "login" && "Entre para acessar seu histórico"}
-            {mode === "signup" && "Salve suas análises na nuvem"}
-            {mode === "reset" && "Enviaremos um link para redefinir sua senha"}
+            {mode === "login" && t("authPage.loginSubtitle")}
+            {mode === "signup" && t("authPage.signupSubtitle")}
+            {mode === "reset" && t("authPage.resetSubtitle")}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "signup" && (
               <div className="space-y-2">
-                <Label htmlFor="displayName">Nome</Label>
+                <Label htmlFor="displayName">{t("authPage.name")}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="displayName"
                     type="text"
-                    placeholder="Seu nome"
+                    placeholder={t("authPage.namePlaceholder")}
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     className="pl-10"
@@ -233,7 +236,7 @@ const Auth = () => {
 
             {mode !== "reset" && (
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="password">{t("authPage.password")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -256,7 +259,7 @@ const Auth = () => {
                   onClick={() => setMode("reset")}
                   className="text-sm text-primary hover:underline"
                 >
-                  Esqueci minha senha
+                  {t("authPage.forgotPassword")}
                 </button>
               </div>
             )}
@@ -270,15 +273,15 @@ const Auth = () => {
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {mode === "login" && "Entrando..."}
-                  {mode === "signup" && "Criando conta..."}
-                  {mode === "reset" && "Enviando..."}
+                  {mode === "login" && t("authPage.loggingIn")}
+                  {mode === "signup" && t("authPage.creatingAccount")}
+                  {mode === "reset" && t("authPage.sending")}
                 </>
               ) : (
                 <>
-                  {mode === "login" && "Entrar"}
-                  {mode === "signup" && "Criar conta"}
-                  {mode === "reset" && "Enviar link de recuperação"}
+                  {mode === "login" && t("auth.login")}
+                  {mode === "signup" && t("auth.signup")}
+                  {mode === "reset" && t("authPage.sendResetLink")}
                 </>
               )}
           </Button>
@@ -288,7 +291,7 @@ const Auth = () => {
             <>
               <div className="flex items-center gap-2 my-4">
                 <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted-foreground">ou</span>
+                <span className="text-xs text-muted-foreground">{t("authPage.or")}</span>
                 <div className="h-px flex-1 bg-border" />
               </div>
 
@@ -302,7 +305,7 @@ const Auth = () => {
                 {isGoogleLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Conectando...
+                    {t("authPage.connecting")}
                   </>
                 ) : (
                   <>
@@ -324,7 +327,7 @@ const Auth = () => {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    Entrar com Google
+                    {t("authPage.googleSignIn")}
                   </>
                 )}
               </Button>
@@ -340,8 +343,8 @@ const Auth = () => {
                 className="text-sm text-primary hover:underline"
               >
                 {mode === "login"
-                  ? "Não tem conta? Criar agora"
-                  : "Já tem conta? Entrar"}
+                  ? t("authPage.noAccount")
+                  : t("authPage.haveAccount")}
               </button>
             </div>
           )}
