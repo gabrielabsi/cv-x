@@ -16,7 +16,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR, enUS } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getCloudHistory, HistoryItem } from "@/lib/history";
 import { AnalysisModal } from "@/components/AnalysisModal";
@@ -66,6 +67,7 @@ const Members = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t, language } = useLanguage();
   
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filteredHistory, setFilteredHistory] = useState<HistoryItem[]>([]);
@@ -106,6 +108,8 @@ const Members = () => {
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [isPremiumResult, setIsPremiumResult] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const dateLocale = language === "en" ? enUS : ptBR;
 
   // Redirect if not logged in
   useEffect(() => {
@@ -268,13 +272,13 @@ const Members = () => {
       if (privateError) throw privateError;
       
       toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram salvas com sucesso.",
+        title: t("members.profileUpdated"),
+        description: t("members.profileSaved"),
       });
     } catch (error) {
       toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar suas informações.",
+        title: t("members.saveError"),
+        description: t("members.saveErrorDesc"),
         variant: "destructive",
       });
     } finally {
@@ -283,9 +287,11 @@ const Members = () => {
   };
 
   const handleCancelSubscription = () => {
-    const subject = encodeURIComponent("Cancelamento de Assinatura CVX");
+    const subject = encodeURIComponent(language === "en" ? "CVX Subscription Cancellation" : "Cancelamento de Assinatura CVX");
     const body = encodeURIComponent(
-      `Olá,\n\nGostaria de solicitar o cancelamento da minha assinatura.\n\nEmail da conta: ${user?.email}\n\nAtenciosamente.`
+      language === "en" 
+        ? `Hello,\n\nI would like to request the cancellation of my subscription.\n\nAccount email: ${user?.email}\n\nBest regards.`
+        : `Olá,\n\nGostaria de solicitar o cancelamento da minha assinatura.\n\nEmail da conta: ${user?.email}\n\nAtenciosamente.`
     );
     window.location.href = `mailto:contato@cxvapp.com?subject=${subject}&body=${body}`;
   };
@@ -359,7 +365,7 @@ const Members = () => {
             className="gap-2 text-muted-foreground hover:text-destructive"
           >
             <LogOut className="w-4 h-4" />
-            Sair
+            {t("members.logout")}
           </Button>
         </div>
       </header>
@@ -369,10 +375,10 @@ const Members = () => {
           {/* Title */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold font-display text-foreground mb-2">
-              Área do Membro
+              {t("members.title")}
             </h1>
             <p className="text-muted-foreground">
-              Gerencie sua conta e visualize seu histórico de análises
+              {t("members.subtitle")}
             </p>
           </div>
 
@@ -400,9 +406,9 @@ const Members = () => {
                     <FileText className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">Nova Análise</h3>
+                    <h3 className="font-semibold text-foreground">{t("members.newAnalysis")}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Preencha os dados para gerar sua análise
+                      {t("members.newAnalysisDesc")}
                     </p>
                   </div>
                 </div>
@@ -437,11 +443,11 @@ const Members = () => {
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="history" className="gap-2">
                 <History className="w-4 h-4" />
-                Histórico
+                {t("members.historyTab")}
               </TabsTrigger>
               <TabsTrigger value="account" className="gap-2">
                 <Settings className="w-4 h-4" />
-                Minha Conta
+                {t("members.accountTab")}
               </TabsTrigger>
             </TabsList>
 
@@ -451,7 +457,7 @@ const Members = () => {
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Ordenar por:</span>
+                  <span className="text-sm text-muted-foreground">{t("members.sortBy")}</span>
                 </div>
                 <div className="flex gap-2">
                   <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "score")}>
@@ -459,8 +465,8 @@ const Members = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="date">Data</SelectItem>
-                      <SelectItem value="score">Nota do Match</SelectItem>
+                      <SelectItem value="date">{t("members.date")}</SelectItem>
+                      <SelectItem value="score">{t("members.matchScore")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as "asc" | "desc")}>
@@ -468,8 +474,8 @@ const Members = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="desc">Decrescente</SelectItem>
-                      <SelectItem value="asc">Crescente</SelectItem>
+                      <SelectItem value="desc">{t("members.descending")}</SelectItem>
+                      <SelectItem value="asc">{t("members.ascending")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -484,13 +490,13 @@ const Members = () => {
                 <div className="text-center py-12 px-6 rounded-2xl bg-card border border-border">
                   <History className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Nenhuma análise encontrada
+                    {t("members.noAnalysis")}
                   </h3>
                   <p className="text-muted-foreground mb-6">
-                    Você ainda não realizou nenhuma análise de currículo.
+                    {t("members.noAnalysisDesc")}
                   </p>
                   <Button variant="hero" onClick={() => setShowAnalysisForm(true)}>
-                    Fazer Primeira Análise
+                    {t("members.firstAnalysis")}
                   </Button>
                 </div>
               ) : (
@@ -521,7 +527,7 @@ const Members = () => {
                           <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
-                              {format(new Date(item.date), "dd/MM/yyyy", { locale: ptBR })}
+                              {format(new Date(item.date), language === "en" ? "MM/dd/yyyy" : "dd/MM/yyyy", { locale: dateLocale })}
                             </span>
                           </div>
                         </div>
@@ -547,8 +553,8 @@ const Members = () => {
                     <User className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">Informações Pessoais</h3>
-                    <p className="text-sm text-muted-foreground">Gerencie seus dados de perfil</p>
+                    <h3 className="font-semibold text-foreground">{t("members.personalInfo")}</h3>
+                    <p className="text-sm text-muted-foreground">{t("members.manageProfile")}</p>
                   </div>
                 </div>
 
@@ -569,16 +575,16 @@ const Members = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="full_name">Nome Completo</Label>
+                        <Label htmlFor="full_name">{t("members.fullName")}</Label>
                         <Input
                           id="full_name"
                           value={formData.full_name}
                           onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                          placeholder="Seu nome completo"
+                          placeholder={t("members.fullNamePlaceholder")}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="birth_date">Data de Nascimento</Label>
+                        <Label htmlFor="birth_date">{t("members.birthDate")}</Label>
                         <Input
                           id="birth_date"
                           type="date"
@@ -587,21 +593,21 @@ const Members = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Telefone</Label>
+                        <Label htmlFor="phone">{t("members.phone")}</Label>
                         <Input
                           id="phone"
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          placeholder="(11) 99999-9999"
+                          placeholder={t("members.phonePlaceholder")}
                         />
                       </div>
                       <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="linkedin_url">URL do LinkedIn</Label>
+                        <Label htmlFor="linkedin_url">{t("members.linkedinUrl")}</Label>
                         <Input
                           id="linkedin_url"
                           value={formData.linkedin_url}
                           onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
-                          placeholder="https://linkedin.com/in/seu-perfil"
+                          placeholder={t("members.linkedinPlaceholder")}
                         />
                       </div>
                     </div>
@@ -613,7 +619,7 @@ const Members = () => {
                         ) : (
                           <Save className="w-4 h-4" />
                         )}
-                        Salvar Alterações
+                        {t("members.saveChanges")}
                       </Button>
                     </div>
                   </div>
@@ -628,14 +634,13 @@ const Members = () => {
                       <X className="w-5 h-5 text-destructive" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground">Gerenciar Assinatura</h3>
-                      <p className="text-sm text-muted-foreground">Solicite o cancelamento da sua assinatura</p>
+                      <h3 className="font-semibold text-foreground">{t("members.manageSubscription")}</h3>
+                      <p className="text-sm text-muted-foreground">{t("members.cancelRequest")}</p>
                     </div>
                   </div>
 
                   <p className="text-sm text-muted-foreground mb-4">
-                    Para cancelar sua assinatura, envie um email para nossa equipe de suporte. 
-                    Processaremos sua solicitação em até 48 horas úteis.
+                    {t("members.cancelInfo")}
                   </p>
 
                   <Button 
@@ -644,7 +649,7 @@ const Members = () => {
                     onClick={handleCancelSubscription}
                   >
                     <Mail className="w-4 h-4" />
-                    Solicitar Cancelamento
+                    {t("members.requestCancel")}
                   </Button>
                 </div>
               )}
