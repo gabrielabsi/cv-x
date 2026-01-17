@@ -59,6 +59,142 @@ export type Database = {
         }
         Relationships: []
       }
+      candidate_evaluations: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          detailed_analysis: Json | null
+          evaluated_at: string
+          fit_score: number
+          id: string
+          job_post_id: string
+          organization_id: string
+          ranking_position: number | null
+          recommendation: Database["public"]["Enums"]["recommendation_type"]
+          strengths: string[] | null
+          summary: string
+          weaknesses: string[] | null
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          detailed_analysis?: Json | null
+          evaluated_at?: string
+          fit_score: number
+          id?: string
+          job_post_id: string
+          organization_id: string
+          ranking_position?: number | null
+          recommendation: Database["public"]["Enums"]["recommendation_type"]
+          strengths?: string[] | null
+          summary: string
+          weaknesses?: string[] | null
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          detailed_analysis?: Json | null
+          evaluated_at?: string
+          fit_score?: number
+          id?: string
+          job_post_id?: string
+          organization_id?: string
+          ranking_position?: number | null
+          recommendation?: Database["public"]["Enums"]["recommendation_type"]
+          strengths?: string[] | null
+          summary?: string
+          weaknesses?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_evaluations_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_evaluations_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_evaluations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidates: {
+        Row: {
+          ai_summary: Json | null
+          created_at: string
+          email: string | null
+          id: string
+          job_post_id: string
+          name: string | null
+          organization_id: string
+          original_filename: string
+          phone: string | null
+          resume_storage_path: string | null
+          resume_text: string | null
+          status: Database["public"]["Enums"]["candidate_status"]
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          ai_summary?: Json | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          job_post_id: string
+          name?: string | null
+          organization_id: string
+          original_filename: string
+          phone?: string | null
+          resume_storage_path?: string | null
+          resume_text?: string | null
+          status?: Database["public"]["Enums"]["candidate_status"]
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          ai_summary?: Json | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          job_post_id?: string
+          name?: string | null
+          organization_id?: string
+          original_filename?: string
+          phone?: string | null
+          resume_storage_path?: string | null
+          resume_text?: string | null
+          status?: Database["public"]["Enums"]["candidate_status"]
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidates_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkout_intents: {
         Row: {
           created_at: string
@@ -152,6 +288,183 @@ export type Database = {
           rewrite_content?: Json
           target_role?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      job_posts: {
+        Row: {
+          ai_summary: Json | null
+          closed_at: string | null
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          location: string | null
+          organization_id: string
+          requirements: string[] | null
+          salary_range: string | null
+          status: Database["public"]["Enums"]["job_status"]
+          title: string
+          updated_at: string
+          work_model: Database["public"]["Enums"]["work_model"] | null
+        }
+        Insert: {
+          ai_summary?: Json | null
+          closed_at?: string | null
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          location?: string | null
+          organization_id: string
+          requirements?: string[] | null
+          salary_range?: string | null
+          status?: Database["public"]["Enums"]["job_status"]
+          title: string
+          updated_at?: string
+          work_model?: Database["public"]["Enums"]["work_model"] | null
+        }
+        Update: {
+          ai_summary?: Json | null
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          location?: string | null
+          organization_id?: string
+          requirements?: string[] | null
+          salary_range?: string | null
+          status?: Database["public"]["Enums"]["job_status"]
+          title?: string
+          updated_at?: string
+          work_model?: Database["public"]["Enums"]["work_model"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_posts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_by: string | null
+          joined_at: string
+          organization_id: string
+          role: Database["public"]["Enums"]["org_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["org_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          joined_at?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["org_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_usage: {
+        Row: {
+          api_calls: number
+          candidates_evaluated: number
+          created_at: string
+          id: string
+          jobs_created: number
+          organization_id: string
+          period_end: string
+          period_start: string
+          updated_at: string
+        }
+        Insert: {
+          api_calls?: number
+          candidates_evaluated?: number
+          created_at?: string
+          id?: string
+          jobs_created?: number
+          organization_id: string
+          period_end: string
+          period_start: string
+          updated_at?: string
+        }
+        Update: {
+          api_calls?: number
+          candidates_evaluated?: number
+          created_at?: string
+          id?: string
+          jobs_created?: number
+          organization_id?: string
+          period_end?: string
+          period_start?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_usage_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          max_candidates_per_job: number
+          max_jobs: number
+          name: string
+          slug: string
+          subscription_tier: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          max_candidates_per_job?: number
+          max_jobs?: number
+          name: string
+          slug: string
+          subscription_tier?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          max_candidates_per_job?: number
+          max_jobs?: number
+          name?: string
+          slug?: string
+          subscription_tier?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -329,9 +642,39 @@ export type Database = {
     }
     Functions: {
       cleanup_old_security_records: { Args: never; Returns: undefined }
+      get_user_org_ids: { Args: { _user_id: string }; Returns: string[] }
+      has_org_role: {
+        Args: {
+          _org_id: string
+          _role: Database["public"]["Enums"]["org_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_org_admin: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_member: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      candidate_status:
+        | "pending"
+        | "analyzed"
+        | "shortlisted"
+        | "rejected"
+        | "hired"
+      job_status: "draft" | "active" | "paused" | "closed"
+      org_role: "owner" | "admin" | "recruiter" | "viewer"
+      recommendation_type:
+        | "strongly_recommend"
+        | "recommend"
+        | "maybe"
+        | "not_recommend"
+      work_model: "remote" | "hybrid" | "onsite"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -458,6 +801,23 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      candidate_status: [
+        "pending",
+        "analyzed",
+        "shortlisted",
+        "rejected",
+        "hired",
+      ],
+      job_status: ["draft", "active", "paused", "closed"],
+      org_role: ["owner", "admin", "recruiter", "viewer"],
+      recommendation_type: [
+        "strongly_recommend",
+        "recommend",
+        "maybe",
+        "not_recommend",
+      ],
+      work_model: ["remote", "hybrid", "onsite"],
+    },
   },
 } as const
