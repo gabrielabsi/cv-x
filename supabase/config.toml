@@ -55,3 +55,15 @@ verify_jwt = false
 
 [functions.create-checkout-intent]
 verify_jwt = false
+
+[functions.create-organization]
+verify_jwt = true
+
+[functions.invite-member]
+verify_jwt = true
+
+[functions.manage-job-post]
+verify_jwt = true
+
+[functions.analyze-candidates-batch]
+verify_jwt = true
